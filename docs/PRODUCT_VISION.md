@@ -64,3 +64,7 @@ Entendimento irrestrito de linguagem, voz/wake word, conversa contínua, control
 O usuário consegue formular um pedido natural, em idioma suportado, obter uma interpretação correta, conferir a ação relevante e vê-la executada com transparência. Para ambiguidades e riscos, a assistente pede confirmação. O progresso é medido por testes de intenção, recuperação contextual, segurança e compatibilidade.
 
 Consulte [Roadmap](ROADMAP.md), [Linguagem natural](NATURAL_LANGUAGE.md) e [Segurança](SECURITY.md).
+
+## Raciocínio configurável e memória entre chats
+
+A visão inclui quatro níveis de esforço de raciocínio (Instantâneo, Médio, Alto, Automático) e quatro estratégias de recuperação (Instantânea, Profunda, Extensa, Automática), com controles independentes. A Rez poderá recuperar conversas autorizadas antigas, inclusive citações exatas e decisões de projetos, sem alegar recordação perfeita. Consultar [REZ THINK](REZ_THINK.md) e [REZ MEMORY](REZ_MEMORY.md). Ambos estão planejados, não implementados.

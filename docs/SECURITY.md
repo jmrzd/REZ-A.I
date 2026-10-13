@@ -68,3 +68,7 @@ O arquivo `os-agent/policy.py` introduz uma camada **fail-closed** entre interpr
 4. Para instalações: validar editor/identidade, origem, assinatura e solicitar aprovação humana antes da execução.
 5. Para interface web↔agente: autenticação, origem, proteção contra CSRF, canais locais e limite de solicitações.
 6. Testar em Windows e Linux em ambientes isolados antes de permitir alterações reais.
+
+## Segurança da memória de longo prazo (planejada)
+
+Mensagens, índices vetoriais, resumos e metadados são dados pessoais potencialmente sensíveis. Só persistir com opt-in granular; aplicar isolamento/autorização por usuário **antes da recuperação**; não enviar dados para provedores externos sem escolha explícita; oferecer exportação, exclusão e prazo de retenção. A exclusão precisa se propagar a índices/caches/backups conforme política publicada. Dados recuperados não podem alterar políticas nem autorizar ações do OS Agent. Todos os níveis de REZ THINK e REZ MEMORY preservam as mesmas regras de autorização. Detalhes em [REZ MEMORY](REZ_MEMORY.md) e [REZ THINK](REZ_THINK.md).

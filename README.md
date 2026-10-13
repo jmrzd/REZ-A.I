@@ -182,6 +182,18 @@ A implementação deverá diferenciar:
 - [Privacidade, permissões e segurança](docs/SECURITY.md)
 - [Plano de implementação e critérios de aceite](docs/ROADMAP.md)
 
+## 🧠 REZ THINK + REZ MEMORY ENGINE
+
+A Rez A.I pretende oferecer **níveis de raciocínio** (Instantâneo, Médio, Alto, Automático) e **níveis independentes de recuperação de memória** (Instantânea, Profunda, Extensa, Automática).
+
+O objetivo de longo prazo é permitir lembrar conversas completas **entre chats autorizados**, com busca por palavras exatas, busca semântica, recuperação de decisões antigas e referência verificável à mensagem original. Histórico persistido não significa que o modelo recebe todas as mensagens simultaneamente nem garante memória perfeita.
+
+**Estado atual:** o histórico da web existe apenas em `localStorage` de um navegador. **Ainda não existem** memória persistente entre dispositivos/contas, busca de conversas antigas ou seleção real de esforço de raciocínio.
+
+- [Especificação detalhada do REZ MEMORY ENGINE](docs/REZ_MEMORY.md)
+- [Especificação dos níveis REZ THINK](docs/REZ_THINK.md)
+- [Arquitetura geral](docs/ARCHITECTURE.md) e [plano de entrega](docs/ROADMAP.md)
+
 ## 🗺️ Roadmap
 
 - [x] Repositório e identidade Rez A.I;
@@ -193,6 +205,8 @@ A implementação deverá diferenciar:
 - [ ] Contas, autenticação e limites de uso;
 - [ ] Suporte a arquivos, busca e RAG;
 - [ ] Memória com controles de privacidade;
+- [ ] REZ MEMORY: histórico integral opt-in, busca lexical e semântica entre chats, citações, exportação e exclusão;
+- [ ] REZ THINK: níveis Instantâneo/Médio/Alto/Automático com limitações e métricas transparentes;
 - [ ] Benchmarks entre modelos abertos;
 - [ ] Roteamento por qualidade, custo e latência;
 - [x] OS Agent inicial para comandos fixos e abertura de URLs permitidas (teste manual reportado no Windows, sem validação automatizada em todas as versões);
@@ -240,6 +254,8 @@ REZ-A.I/
 │   ├── OS_INTEGRATION.md
 │   ├── PLUGINS_AND_AGENTS.md
 │   ├── SECURITY.md
+│   ├── REZ_MEMORY.md
+│   ├── REZ_THINK.md
 │   └── ROADMAP.md
 ├── .gitignore
 └── README.md

@@ -23,6 +23,11 @@
 | 0.7 Plugins | registro/execução de ferramentas | Planejado | permissões e confirmação cobertos por testes |
 | 0.8 Connect | OAuth e integrações | Planejado | escopos mínimos e revogação funcionais |
 | 0.9 Memory | memória e preferências opt-in | Planejado | inspeção/exclusão/retensão verificadas |
+| M1 Memory Archive | persistência integral e busca exata entre chats | Planejado | recuperar mensagem original e origem após reinício |
+| M2 Memory Semantic | embeddings e recuperação com fonte | Planejado | benchmarks de recall e isolamento entre usuários |
+| M3 Memory Controls | opt-in, exportação, correção, exclusão | Planejado | exclusão propagada a índices e caches |
+| T1 Think Levels | Instantâneo/Médio/Alto/Automático | Planejado | modos testados contra capacidades do provedor e limites |
+| T2 Think Auto | roteamento de esforço conforme tarefa | Planejado | comparar qualidade/latência e documentar fallback |
 | 1.x | produto estável e multiplataforma | Visão | segurança, confiabilidade e documentação de releases |
 
 Numeração acima é **proposta de marcos**, não versão prometida ou lançada.
@@ -52,3 +57,7 @@ Para cada marco:
 ## Links
 
 [Visão](PRODUCT_VISION.md) · [NLU e contexto](NATURAL_LANGUAGE.md) · [OS](OS_INTEGRATION.md) · [Plugins](PLUGINS_AND_AGENTS.md) · [Segurança](SECURITY.md) · [Pesquisa](RESEARCH.md)
+
+## Dependências de memória e raciocínio
+
+Priorizar armazenamento local controlado e busca textual antes de busca vetorial e sincronização multiusuário. Segurança e consentimento precedem indexação persistente. Implementar métricas e validação de provedores antes de oferecer níveis de raciocínio funcionais. Especificações: [REZ MEMORY](REZ_MEMORY.md) e [REZ THINK](REZ_THINK.md).

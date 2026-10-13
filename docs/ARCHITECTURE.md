@@ -49,3 +49,7 @@ Interface web / aplicativos
 
 ## Segurança
 Nunca enviar chaves privadas ao frontend. Antes do deploy público, acrescentar autenticação, rate limiting, restrição de CORS por ambiente, logs sem informações sensíveis, validação de ferramentas e limites de custo.
+
+## Subsistemas planejados: REZ THINK e REZ MEMORY
+
+Esses recursos **não estão ativos** no MVP. [REZ THINK](REZ_THINK.md) gerenciará estratégia/esforço de inferência, respeitando as capacidades do provedor; [REZ MEMORY](REZ_MEMORY.md) armazenará histórico consentido e recuperará evidências entre chats. Os seletores são **independentes**. A arquitetura prevê `Rez Core → Auth/Consent → Memory Retrieval → Model Router/Think → Security Policy → Tools`, com filtro de autorização antes de expor resultados e sem conceder poderes de sistema por escolha de nível.
