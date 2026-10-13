@@ -146,3 +146,52 @@ node_modules/node-pty/lib/worker/conoutSocketWorker.js
 5. Testes de segurança para pedidos de execução sem consentimento, caminhos fora de escopo e instruções maliciosas vindas de ferramentas.
 
 **Nenhum código ou binário do Claude deve ser incorporado à REZ.** Próximos estudos podem usar metadados, comportamento documentado e bibliotecas de código aberto sob suas licenças.
+
+
+## Terceira rodada — assets de interfaces e executáveis auxiliares
+
+**Fonte:** listagem PowerShell de caminhos de `app.asar` e metadados `VersionInfo` dos arquivos `.exe` da instalação Windows.
+
+### Arquivos relevantes nas interfaces
+
+```text
+.vite/renderer/local_exec_consent/assets/main-BdelVSAW.js
+.vite/renderer/local_exec_consent/localExecConsent.html
+.vite/renderer/main_window/assets/MainWindowPage-Oioe5_Mq.js
+.vite/renderer/main_window/assets/MainWindowPage-yE7nSc5c.css
+.vite/renderer/main_window/assets/attachReactWithSelector-Bjnpmd0U.js
+.vite/renderer/main_window/assets/clawdQuestEngine-B9DWL_V0.js
+.vite/renderer/main_window/assets/clawdQuestEngine-C2Z1JudX.css
+.vite/renderer/main_window/assets/main-BvLmXOuS.js
+.vite/renderer/main_window/assets/react-intl-CDLd1RMZ.js
+.vite/renderer/main_window/index.html
+.vite/renderer/quick_window/assets/main-BLWA8RtE.js
+.vite/renderer/quick_window/assets/main-CiwjW8Wn.css
+.vite/renderer/quick_window/quick-window.html
+```
+
+Os arquivos sugerem bundles específicos por janela e uso de tecnologias React/intl; a mera existência dos nomes não comprova a composição original, fluxo de consentimento nem o funcionamento do `clawdQuestEngine`.
+
+### Executáveis observados
+
+```text
+chrome-native-host.exe
+claude-ssh-askpass.exe
+claude-ssh-broker.exe
+claude-ssh-proxy.exe
+cowork-svc.exe
+github-mcp-server.exe
+```
+
+Na saída consultada, os campos `VersionInfo.CompanyName` e `VersionInfo.FileDescription` estavam vazios. Portanto, não atribuir funções exatas nem garantias de segurança com base nesses campos.
+
+### Aplicações planejadas para REZ A.I
+
+- **REZ Consent UI:** janela de confirmação com descrição clara da ação, escopo e resultado; a autorização real deve ser validada por serviço confiável.
+- **REZ Desktop Shell:** janela principal e janela rápida com isolamento de contexto e IPC de superfície mínima.
+- **REZ Browser Bridge:** integração com navegador por API/extension oficialmente documentada, sem conceder permissões globais.
+- **REZ GitHub Tool Adapter:** integração MCP com permissões por repositório, usuário e operação, sem expor tokens no renderer.
+- **REZ Terminal/SSH:** autenticação e autorização explícitas; credenciais no armazenamento adequado do sistema; evitar execução irrestrita.
+- **REZ UX modular:** assets por janela, internacionalização e carregamento seletivo quando medido como vantajoso.
+
+**Próximas verificações:** consultar licenças e documentação pública de bibliotecas; testar arquiteturas originais com limites de confiança, sem extrair/reutilizar código privado. Não afirmar superioridade de segurança sem testes.
