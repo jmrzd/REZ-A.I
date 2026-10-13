@@ -92,3 +92,57 @@ $arquivos = @(npx.cmd --yes @electron/asar list $asar)
 ```
 
 **Ética e propriedade intelectual:** pesquisa para interoperabilidade, aprendizagem e design original; não redistribuir arquivos do fornecedor, código proprietário, credenciais nem contornar licenciamento ou controles de acesso.
+
+
+## Segunda rodada — interfaces, workers e módulos nativos
+
+**Origem:** saída PowerShell do pacote instalado, versão `2.31226.1`. Contagens são dos caminhos apresentados pelo comando de filtragem, não de todos os componentes do produto.
+
+### Seis interfaces HTML identificadas
+
+```text
+.vite/renderer/about_window/about.html
+.vite/renderer/buddy_window/buddy.html
+.vite/renderer/find_in_page/find-in-page.html
+.vite/renderer/local_exec_consent/localExecConsent.html
+.vite/renderer/main_window/index.html
+.vite/renderer/quick_window/quick-window.html
+```
+
+A interface `local_exec_consent` **sugere** um fluxo de consentimento para execução local, mas nomes de arquivos não demonstram que esse fluxo seja obrigatório, completo ou resistente a ataques.
+
+### Oito arquivos de worker apresentados
+
+```text
+.vite/build/file-index-worker/fileIndexWorker.js
+.vite/build/heavy-work-worker/heavyWorkWorker.js
+.vite/build/msal-broker-worker/msalBrokerWorker.js
+.vite/build/pty-host/ptyHostWorker.js
+.vite/build/shell-path-worker/shellPathWorker.js
+.vite/build/stall-sampler-worker/stallSamplerWorker.js
+.vite/build/transcript-search-worker/transcriptSearchWorker.js
+node_modules/node-pty/lib/worker/conoutSocketWorker.js
+```
+
+### Seis arquivos binários em app.asar.unpacked
+
+| Nome | Extensão | Tamanho observado (bytes) |
+| --- | --- | ---: |
+| claude-native-binding.node | .node | 3.755.856 |
+| conpty.node | .node | 312.144 |
+| conpty_console_list.node | .node | 155.472 |
+| github-mcp-server.exe | .exe | 20.566.352 |
+| msal-node-runtime.node | .node | 365.904 |
+| msalruntime.dll | .dll | 3.261.536 |
+
+`conpty` sugere integração com pseudo-terminal do Windows; `github-mcp-server.exe` sugere um componente para integração GitHub/MCP; `msal` sugere autenticação Microsoft. São **inferências a partir de nomes**, não comprovação de execução ou controles internos.
+
+### Ideias de implementação original na REZ
+
+1. Janela de consentimento para operações locais sensíveis, vinculada a autorização efetiva no serviço de ferramentas.
+2. Terminal com escopo limitado e aprovação por operação; não confiar na confirmação visual do frontend como única barreira.
+3. Adaptadores MCP independentes, com permissões mínimas por integração.
+4. Workers separados para indexação, busca e tarefas pesadas, conforme métricas de desempenho.
+5. Testes de segurança para pedidos de execução sem consentimento, caminhos fora de escopo e instruções maliciosas vindas de ferramentas.
+
+**Nenhum código ou binário do Claude deve ser incorporado à REZ.** Próximos estudos podem usar metadados, comportamento documentado e bibliotecas de código aberto sob suas licenças.
