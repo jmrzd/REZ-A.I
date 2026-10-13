@@ -195,3 +195,33 @@ Na saída consultada, os campos `VersionInfo.CompanyName` e `VersionInfo.FileDes
 - **REZ UX modular:** assets por janela, internacionalização e carregamento seletivo quando medido como vantajoso.
 
 **Próximas verificações:** consultar licenças e documentação pública de bibliotecas; testar arquiteturas originais com limites de confiança, sem extrair/reutilizar código privado. Não afirmar superioridade de segurança sem testes.
+
+
+## Quarta rodada — assinaturas digitais Authenticode
+
+**Fonte:** comando PowerShell `Get-AuthenticodeSignature` executado localmente sobre arquivos `.exe` encontrados em `app/resources` do Claude Desktop para Windows.
+
+| Arquivo | Status reportado | Sujeito do certificado |
+| --- | --- | --- |
+| chrome-native-host.exe | Valid | Anthropic, PBC |
+| claude-ssh-askpass.exe | Valid | Anthropic, PBC |
+| claude-ssh-broker.exe | Valid | Anthropic, PBC |
+| claude-ssh-proxy.exe | Valid | Anthropic, PBC |
+| cowork-svc.exe | Valid | Anthropic, PBC |
+| github-mcp-server.exe | Valid | Anthropic, PBC |
+
+O campo `SignerCertificate.Subject` continha `CN="Anthropic, PBC", O="Anthropic, PBC", L=San Francisco, S=California, C=US`, além de atributos do registro corporativo. O status `Valid` foi reportado para **todos os seis executáveis verificados**. O teste não cobriu todos os arquivos do aplicativo, nem o comportamento dos executáveis.
+
+### Lição para REZ A.I
+
+- Assinar os binários distribuídos para Windows usando uma identidade de publicação apropriada.
+- Verificar assinatura, procedência e integridade das atualizações antes de instalá-las.
+- Definir processo de publicação e resposta a comprometimento de chaves.
+- Testar rejeição de atualizações adulteradas ou não assinadas.
+- Evitar conclusões exageradas: **assinatura válida não é prova de ausência de vulnerabilidades**.
+
+### Próximos testes não invasivos
+
+- Consultar os metadados de assinatura do executável principal e manifesto MSIX/Appx.
+- Investigar a política de atualização do próprio projeto REZ a partir de documentação oficial de Electron/Windows.
+- Construir um protótipo próprio de verificação de atualização assinada, com testes de adulteração.
