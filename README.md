@@ -7,7 +7,7 @@
 **Uma plataforma de IA híbrida construída para aprender com a pesquisa de ponta e evoluir com evidências.**
 
 ![Status](https://img.shields.io/badge/status-MVP%20em%20desenvolvimento-8b5cf6?style=flat-square)
-![Version](https://img.shields.io/badge/version-0.1.0-202026?style=flat-square)
+![Version](https://img.shields.io/badge/version-0.1.0-27272a?style=flat-square)
 ![Web](https://img.shields.io/badge/interface-Full%20Black%20Premium-050507?style=flat-square)
 ![Python](https://img.shields.io/badge/backend-Python%20%2B%20FastAPI-3776AB?style=flat-square)
 ![Next.js](https://img.shields.io/badge/frontend-Next.js-111111?style=flat-square)
@@ -154,7 +154,33 @@ Eixos de investigação:
 
 Pesquisa não equivale a copiar serviços fechados, contornar controles, obter pesos privados ou ignorar licenças. **Código público não é necessariamente software livre;** cada repositório, checkpoint e dataset exige verificação específica de seus termos.
 
-Veja nosso [plano de pesquisa](docs/RESEARCH.md).
+Veja nosso [plano de pesquisa](docs/RESEARCH.md) e a [visão de funcionalidades](docs/PRODUCT_VISION.md).
+
+## 🌐 Diferencial: Rez Universal Assistant
+
+A experiência desejada não exige comandos rígidos nem repetir o nome da assistente em cada frase. A Rez deve compreender solicitações naturais **dentro de uma sessão ativa**, levar em conta o contexto e executar apenas ações permitidas.
+
+> "Abre aí o Spotify, meu parceiro." → abrir Spotify.
+>
+> "Rez, abre o YouTube." / "Agora abre o Spotify também." / "Volta pra primeira aba." → reconhecer o contexto e, com integração de navegador autorizada, retornar à aba anterior.
+>
+> "Hey Rez, open my mail." / "Abre mi correo." → entender a intenção mesmo em outros idiomas.
+
+**Hoje:** o OS Agent interpreta somente frases simples por regras, a partir de um terminal, e abre sites predefinidos. **Futuro:** NLU com modelos abertos, contexto de sessão, voz, integrações com navegador e aplicativos.
+
+A implementação deverá diferenciar:
+- **Modo texto:** comandos diretos sem chamar "Rez";
+- **Ativação por voz:** "Hey Rez" e atalhos;
+- **Conversa contínua (opt-in):** dispensar a palavra de ativação durante uma sessão delimitada;
+- **Escuta contínua opcional:** somente com indicação visível, controle de microfone e proteção contra ativações acidentais.
+
+📚 **Documentação detalhada**
+- [Visão do produto e exemplos de interação](docs/PRODUCT_VISION.md)
+- [Linguagem natural, contexto e voz](docs/NATURAL_LANGUAGE.md)
+- [Integração Windows, Linux e navegadores](docs/OS_INTEGRATION.md)
+- [Plugins, conectores e agentes](docs/PLUGINS_AND_AGENTS.md)
+- [Privacidade, permissões e segurança](docs/SECURITY.md)
+- [Plano de implementação e critérios de aceite](docs/ROADMAP.md)
 
 ## 🗺️ Roadmap
 
@@ -169,6 +195,11 @@ Veja nosso [plano de pesquisa](docs/RESEARCH.md).
 - [ ] Memória com controles de privacidade;
 - [ ] Benchmarks entre modelos abertos;
 - [ ] Roteamento por qualidade, custo e latência;
+- [x] OS Agent inicial para comandos fixos e abertura de URLs permitidas (teste manual reportado no Windows, sem validação automatizada em todas as versões);
+- [ ] Linguagem natural para frases livres, gírias e idiomas variados;
+- [ ] Contexto entre comandos, navegação de abas e aplicativos;
+- [ ] Voz, ativação opcional e sessão conversacional;
+- [ ] Plugins com permissões e conectores externos;
 - [ ] Agentes e ferramentas especializadas;
 - [ ] Aplicativos Android, iOS e desktop;
 - [ ] Experimentos de fine-tuning, dentro dos recursos e licenças disponíveis.
@@ -197,9 +228,19 @@ REZ-A.I/
 │   │   └── style.css
 │   ├── package.json
 │   └── tsconfig.json
+├── os-agent/
+│   ├── agent.py
+│   ├── tests/
+│   └── README.md
 ├── docs/
 │   ├── ARCHITECTURE.md
-│   └── RESEARCH.md
+│   ├── RESEARCH.md
+│   ├── PRODUCT_VISION.md
+│   ├── NATURAL_LANGUAGE.md
+│   ├── OS_INTEGRATION.md
+│   ├── PLUGINS_AND_AGENTS.md
+│   ├── SECURITY.md
+│   └── ROADMAP.md
 ├── .gitignore
 └── README.md
 ```
