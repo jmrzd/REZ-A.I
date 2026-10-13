@@ -237,3 +237,26 @@ O usuário executou `Get-AuthenticodeSignature` para o caminho `$claude/app/clau
 O comando `Get-AppxPackage -Name "Claude" | Select-Object Name, Version, Publisher, SignatureKind, IsFramework` **não exibiu uma linha de identidade do pacote** na saída fornecida. Não inferir daí a versão atual, a identidade do publisher do pacote, nem a causa da ausência.
 
 **Aplicação na REZ:** para o futuro instalador desktop, adotar assinatura digital e verificação de integridade de binários e atualizações. Isso é uma meta de engenharia, não uma funcionalidade já implementada. Assinatura válida não prova ausência de vulnerabilidades nem comprova isolamento dos processos.
+
+
+## Sexta rodada — árvore de processos em execução
+
+**Fonte:** saída local de `Get-CimInstance Win32_Process` filtrada por `Claude|cowork|github-mcp`, com colunas `ProcessId`, `ParentProcessId` e `Name`. Fotografia de um único momento, não uma descrição de todos os processos possíveis.
+
+- `claude.exe` PID **11736**, pai **2268**.
+- Sete processos `claude.exe` filhos de **11736**: **24820**, **15508**, **22208**, **11672**, **24988**, **21708** e **7384**.
+- `cowork-svc.exe` PID **5880**, pai **828**; o pai não aparece no conjunto filtrado.
+- **Nove processos** correspondentes ao filtro no momento da coleta. Nenhum processo `github-mcp-server.exe` apareceu nessa fotografia; isso **não prova** que o recurso não seja utilizado em outras situações.
+
+A relação pai/filho demonstra a organização de processos observada, mas **não identifica papéis de renderer, GPU, network service ou utility**. A presença de `cowork-svc.exe` com outro pai também não comprova independência arquitetural ou isolamento de segurança.
+
+### Aplicações na REZ A.I
+
+- Separar a UI, o núcleo de ferramentas e os workers por limites de confiança e necessidade de desempenho.
+- Documentar o ciclo de vida de processos e as permissões de IPC antes de implementar a versão desktop.
+- Testar encerramento seguro de processos auxiliares, recuperação de falhas e limites de recursos.
+- Instrumentar métricas de CPU/memória por processo, sem coletar conteúdos privados de usuários.
+
+### Próxima coleta não invasiva
+
+Consultar `CommandLine` dos processos **somente localmente**, pois argumentos podem conter caminhos pessoais ou tokens. Antes de compartilhar qualquer saída, remover dados sensíveis. Preferir inicialmente extrair apenas marcadores `--type=` e `--utility-sub-type=` quando presentes, sem publicar a linha completa.
