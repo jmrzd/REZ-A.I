@@ -335,3 +335,35 @@ A presença de `ws` comprova que o pacote inclui uma implementação de WebSocke
 **Limites:** `devDependencies` não provam que cada pacote esteja presente no binário distribuído, seja executado em produção ou exponha determinada funcionalidade. Entradas `workspace:*` e `catalog:` indicam referências de workspace/catálogo, não versões finais resolvidas. O `package.json` publicado pode preservar metadados de build.
 
 **Aplicações propostas para REZ A.I:** avaliar Electron + Forge para desktop, compartilhar componentes React/TypeScript com o frontend web, usar schemas Zod/JSON para validação, Vitest/Playwright para testes, MCP com consentimento e autorização, e observabilidade com tratamento cuidadoso de dados sensíveis. Não incorporar pacotes privados da Anthropic nem copiar seus componentes proprietários.
+
+
+## Décima primeira rodada — workers, hosts MCP e recursos Office 365
+
+**Fonte:** listagem somente leitura de caminhos do `app.asar`, filtrada por `worker|preload|pty|mcp`.
+
+**Workers e tarefas observados:**
+- `.vite/build/file-index-worker/fileIndexWorker.js`
+- `.vite/build/heavy-work-worker/heavyWorkWorker.js` (com `dist-CI9lzb1v.js` e `rolldown-runtime-CI_2c2Xz.js`)
+- `.vite/build/msal-broker-worker/msalBrokerWorker.js`
+- `.vite/build/pty-host/ptyHostWorker.js`
+- `.vite/build/shell-path-worker/shellPathWorker.js`
+- `.vite/build/stall-sampler-worker/stallSamplerWorker.js`
+- `.vite/build/transcript-search-worker/transcriptSearchWorker.js`
+- `node_modules/node-pty/lib/worker/conoutSocketWorker.js`
+
+**Entradas de execução MCP observadas:**
+- `.vite/build/mcp-runtime/directMcpHost.js`
+- `.vite/build/mcp-runtime/nodeHost.js`
+
+**Recursos distribuídos no pacote:**
+- `resources/github-mcp/github-mcp-server.exe`
+- `resources/office365-mcp/msal-node-runtime.node`
+- `resources/office365-mcp/msalruntime.dll`
+- `resources/office365-mcp/office365-mcp-stdio.mjs`
+- `resources/office365-mcp/pdf.worker.mjs`
+- `resources/office365-mcp/pdfExtractorProcess.mjs`
+- `node_modules/node-pty/prebuilds/win32-x64/conpty.node` e `conpty_console_list.node`
+
+**Limites da evidência:** a existência dos caminhos confirma apenas o empacotamento. Os nomes sugerem busca de transcrições, indexação, execução MCP, terminal, Microsoft 365 e PDF, mas não comprovam execução em tempo real, funcionalidades expostas ao usuário, privilégios ou desenho exato de IPC.
+
+**Aplicações propostas para REZ A.I:** (1) serviços/filas separados para indexação e busca na memória com controles de acesso; (2) runtime MCP original com registro de ferramentas, allowlist e consentimento; (3) terminal isolado, sem execução direta de comandos sugeridos por modelos; (4) processamento de PDF isolado e com limites de recursos; (5) telemetria de tarefas lentas sem capturar segredos. Todos esses itens permanecem **planejados**, não implementados.
