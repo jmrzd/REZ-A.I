@@ -1,0 +1,33 @@
+# Segredos e ambiente local
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+dist/
+.vercel/
+*.tsbuildinfo
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.coverage
+
+# Dados locais
+*.sqlite
+*.sqlite3
+
+# Editor e sistema
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
