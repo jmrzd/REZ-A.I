@@ -413,3 +413,26 @@ A presença de `ws` comprova que o pacote inclui uma implementação de WebSocke
 - SIDs de capacidade e direitos numéricos não foram identificados nesta rodada; não atribuir permissões específicas a eles sem análise adicional.
 
 **Implicação para REZ Desktop:** instalar binários em diretório protegido, manter configuração e dados mutáveis em diretórios separados, aplicar permissões mínimas e testar a integridade de distribuição. Sandboxing, autorização de ferramentas e proteção de credenciais exigem mecanismos próprios, não demonstrados por esta ACL.
+
+
+## Décima quinta rodada — capacidades e entradas do manifesto Windows
+
+**Fonte:** `Get-AppxPackageManifest -Package (Get-AppxPackage -Name Claude).PackageFullName` e consulta somente leitura dos nós `Package.Capabilities` e `Package.Applications`, versão instalada 2.37337.1.0.
+
+**Capacidades declaradas no manifesto:**
+- `runFullTrust`
+- `localSystemServices`
+- `packagedServices`
+- `unvirtualizedResources`
+- `internetClient`
+
+**Aplicativos declarados:**
+| Id | Executable | EntryPoint |
+| --- | --- | --- |
+| `Claude` | `app\\Claude.exe` | `Windows.FullTrustApplication` |
+| `SshAskpass` | `app\\resources\\claude-ssh-askpass.exe` | `Windows.FullTrustApplication` |
+| `SshProxy` | `app\\resources\\claude-ssh-proxy.exe` | `Windows.FullTrustApplication` |
+
+**Interpretação e limites:** `runFullTrust` e `Windows.FullTrustApplication` mostram que o pacote pode hospedar processos desktop fora do modelo restrito UWP. Não provam execução elevada como administrador, acesso irrestrito a todos os recursos, invocação efetiva dos auxiliares SSH nem ausência de outras proteções. `localSystemServices`, `packagedServices` e `unvirtualizedResources` foram observadas como declarações; seu uso efetivo não foi verificado.
+
+**Relevância para REZ Desktop:** separar interface, provedores de IA e execução de ferramentas; exigir consentimento para operações com efeitos externos, impor privilégios mínimos e evitar presumir que o empacotamento Windows, por si só, isola processos full-trust.
