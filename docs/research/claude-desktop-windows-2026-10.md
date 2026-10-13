@@ -260,3 +260,25 @@ A relação pai/filho demonstra a organização de processos observada, mas **n�
 ### Próxima coleta não invasiva
 
 Consultar `CommandLine` dos processos **somente localmente**, pois argumentos podem conter caminhos pessoais ou tokens. Antes de compartilhar qualquer saída, remover dados sensíveis. Preferir inicialmente extrair apenas marcadores `--type=` e `--utility-sub-type=` quando presentes, sem publicar a linha completa.
+
+
+## Sétima rodada — tipos de subprocessos Electron/Chromium
+
+**Fonte:** consulta local `Win32_Process.CommandLine` com extração restrita de `--type=` e `--utility-sub-type=`; a linha de comando completa não foi compartilhada.
+
+| PID | `--type` observado | `--utility-sub-type` observado |
+| --- | --- | --- |
+| 11736 | ausente; principal ou não identificado | — |
+| 24820 | crashpad-handler | — |
+| 15508 | gpu-process | — |
+| 22208 | utility | network.mojom.NetworkService |
+| 11672 | renderer | — |
+| 24988 | renderer | — |
+| 21708 | utility | video_capture.mojom.VideoCaptureService |
+| 7384 | utility | audio.mojom.AudioService |
+
+**Conclusões sustentadas:** foram observados dois renderers, um processo GPU, um handler de falhas e serviços auxiliares Chromium de rede, captura de vídeo e áudio, além de um processo sem marcador `--type`. A saída é um instantâneo; não revela a comunicação IPC, as permissões de cada processo nem a atividade efetiva dos serviços. Em particular, a presença de `VideoCaptureService` não demonstra que haja gravação ativa.
+
+**Aplicação na REZ A.I:** documentar separação de responsabilidades na futura versão desktop; manter renderers sem privilégios desnecessários; validar IPC; isolar agentes e acesso a arquivos; solicitar consentimento explícito para microfone/câmera/captura de tela; testar recuperação de falhas. Esses controles são objetivos de implementação, não recursos já presentes no MVP web.
+
+**Próxima investigação segura:** mapear APIs e padrões documentados de Electron (processo principal, renderer, preload, IPC, sandbox) e projetar um protótipo original com testes de autorização.
