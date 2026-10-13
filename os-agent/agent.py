@@ -38,7 +38,7 @@ class Result:
 def normalize(text: str) -> str:
     text = unicodedata.normalize("NFKD", text.lower())
     text = "".join(c for c in text if not unicodedata.combining(c))
-    return re.sub(r"[^a-z0-9 -]+", " ", text).strip()
+    return " ".join(re.sub(r"[^a-z0-9 -]+", " ", text).split())
 
 def resolve(command: str) -> str | None:
     words = normalize(command).split()

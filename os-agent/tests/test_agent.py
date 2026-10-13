@@ -18,6 +18,8 @@ class AgentTests(unittest.TestCase):
         self.assertIsNone(resolve("open https://example.com"))
     def test_normalize(self):
         self.assertEqual(normalize("OLÁ, REZ!"), "ola rez")
+    def test_normalize_repeated_spaces(self):
+        self.assertEqual(normalize("  OLÁ,,,    REZ!!!  "), "ola rez")
     def test_opener_called(self):
         fn = Mock(return_value=True)
         result = execute("Rez, abre Gmail", opener=fn)
