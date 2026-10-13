@@ -399,3 +399,17 @@ A presença de `ws` comprova que o pacote inclui uma implementação de WebSocke
 - O nome `mcp` e o caminho `ion-dist` não demonstram por si só a finalidade, execução, privilégios ou conexão com os hosts MCP de `.vite/build/mcp-runtime`.
 
 **Próximo passo seguro:** inspecionar apenas metadados de arquivos e permissões da instalação; não executar scripts internos nem acessar credenciais, tokens ou dados privados de usuários.
+
+
+## Décima quarta rodada — ACL da instalação e metadados do pacote
+
+**Fonte:** saída fornecida pelo usuário dos comandos `Get-AppxPackage -Name Claude` e `Get-Acl` sobre a pasta `InstallLocation`, sem modificações.
+
+- Versão: **2.37337.1.0**.
+- Nome do pacote: `Claude`; publicador declarado: `Anthropic, PBC`; `SignatureKind: Developer`; `IsFramework: False`.
+- ACL apresentada: `BUILTIN\\Usuários` com `ReadAndExecute` e `Read`; `NT SERVICE\\TrustedInstaller` e `NT AUTHORITY\\SYSTEM` com `FullControl`; `BUILTIN\\Administradores`, `SERVIÇO LOCAL`, `SERVIÇO DE REDE` e `RESTRITO` com `ReadAndExecute`. Também aparecem SIDs de capacidade `S-1-15-3-...` e máscaras de acesso numéricas não decodificadas.
+- As entradas de ACL exibidas não atribuem escrita diretamente ao grupo de usuários comuns. Isso **não** equivale a prova de isolamento do processo, ausência de escrita em outras pastas ou segurança geral.
+- `SignatureKind: Developer` é um metadado de empacotamento; não equivale à verificação criptográfica de assinatura válida do pacote ou dos executáveis.
+- SIDs de capacidade e direitos numéricos não foram identificados nesta rodada; não atribuir permissões específicas a eles sem análise adicional.
+
+**Implicação para REZ Desktop:** instalar binários em diretório protegido, manter configuração e dados mutáveis em diretórios separados, aplicar permissões mínimas e testar a integridade de distribuição. Sandboxing, autorização de ferramentas e proteção de credenciais exigem mecanismos próprios, não demonstrados por esta ACL.
