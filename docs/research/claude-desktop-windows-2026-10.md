@@ -305,3 +305,20 @@ A presença de `ws` comprova que o pacote inclui uma implementação de WebSocke
 5. Criar testes de IPC malformado, chamadas sem autorização, injeção de instruções por conteúdo externo e limites de execução.
 
 **Próximo passo:** estudar APIs públicas do Electron e protocolos documentados, em vez de copiar ou redistribuir JavaScript compilado do Claude.
+
+
+## Nona rodada — entradas de inicialização e quantidade de chunks
+
+**Fonte:** listagem local de caminhos de `app.asar` por `@electron/asar list`, filtrada no PowerShell.
+
+- Encontrados `.vite/build/index.js` e `.vite/build/index.pre.js`.
+- O `package.json` já observado declara `.vite/build/index.pre.js` como `main`. A função precisa de `index.js` ainda não foi verificada.
+- O filtro `index\.chunk-.*\.js$` retornou **330 caminhos**.
+- O filtro por nomes contendo `electron|sandbox|permission|security` **não retornou caminhos**. Isso não indica ausência de IPC, sandbox, políticas de permissão ou outros controles: eles podem estar em bundles com nomes genéricos.
+
+### Lições para a REZ A.I
+
+- Organizar pontos de entrada explícitos e módulos especializados.
+- Aplicar divisão de código quando houver benefício mensurável; a quantidade de chunks isoladamente não é métrica de qualidade.
+- Implementar e testar políticas de segurança no código próprio, independentemente dos nomes dos arquivos.
+- Investigar APIs documentadas do Electron para `main`, `preload`, `renderer` e IPC, sem reproduzir código proprietário.
