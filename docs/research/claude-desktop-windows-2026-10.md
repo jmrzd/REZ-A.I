@@ -322,3 +322,16 @@ A presença de `ws` comprova que o pacote inclui uma implementação de WebSocke
 - Aplicar divisão de código quando houver benefício mensurável; a quantidade de chunks isoladamente não é métrica de qualidade.
 - Implementar e testar políticas de segurança no código próprio, independentemente dos nomes dos arquivos.
 - Investigar APIs documentadas do Electron para `main`, `preload`, `renderer` e IPC, sem reproduzir código proprietário.
+
+
+## Décima rodada — dependências de desenvolvimento declaradas
+
+**Fonte:** saída local de `package.json` da distribuição Claude Desktop 2.31226.1, seção `devDependencies`.
+
+**Ferramentas declaradas:** `electron`, `@electron-forge/cli` e makers/plugins da linha `8.0.0-alpha.10`, `@electron/fuses`, `react`, `react-dom`, `typescript`, `vite`, `@vitejs/plugin-react`, `tailwindcss`, `vitest`, `playwright-core@1.57.0`, `@modelcontextprotocol/client`, `@modelcontextprotocol/core`, `@modelcontextprotocol/sdk`, `@anthropic-ai/claude-agent-sdk@0.3.295`, `@anthropic-ai/mcpb@2.1.2`, `zod`, `ajv`, `@sentry/electron`, `@xterm/headless@6.0.0`, `ssh2`, `winston`, `electron-store`.
+
+**Pacotes internos ou privados indicados pelos nomes:** `@ant/ipc-codegen`, `@ant/security`, `@ant/private-api-client`, `@ant/managed-config`, `@ant/clawd-quest`, `@ant/cowork-win32-service`, `@ant/chrome-native-host`, `@ant/claude-ssh`, `@ant/browser-tool-schemas`, `@anthropic-ai/electron-devtools-mcp`. Suas implementações e funções reais não foram verificadas.
+
+**Limites:** `devDependencies` não provam que cada pacote esteja presente no binário distribuído, seja executado em produção ou exponha determinada funcionalidade. Entradas `workspace:*` e `catalog:` indicam referências de workspace/catálogo, não versões finais resolvidas. O `package.json` publicado pode preservar metadados de build.
+
+**Aplicações propostas para REZ A.I:** avaliar Electron + Forge para desktop, compartilhar componentes React/TypeScript com o frontend web, usar schemas Zod/JSON para validação, Vitest/Playwright para testes, MCP com consentimento e autorização, e observabilidade com tratamento cuidadoso de dados sensíveis. Não incorporar pacotes privados da Anthropic nem copiar seus componentes proprietários.
