@@ -282,3 +282,26 @@ Consultar `CommandLine` dos processos **somente localmente**, pois argumentos po
 **Aplicação na REZ A.I:** documentar separação de responsabilidades na futura versão desktop; manter renderers sem privilégios desnecessários; validar IPC; isolar agentes e acesso a arquivos; solicitar consentimento explícito para microfone/câmera/captura de tela; testar recuperação de falhas. Esses controles são objetivos de implementação, não recursos já presentes no MVP web.
 
 **Próxima investigação segura:** mapear APIs e padrões documentados de Electron (processo principal, renderer, preload, IPC, sandbox) e projetar um protótipo original com testes de autorização.
+
+
+## Oitava rodada — caminhos relacionados a IPC, entradas de build e comunicação
+
+**Fonte:** listagem local de caminhos do `app.asar` com filtros por nome; os resultados foram truncados em 35 ou 30 itens conforme os comandos.
+
+- O filtro `ipc|preload|bridge|channel|message` encontrou somente `node_modules/ws/lib/permessage-deflate.js`, por conter a palavra `message`. **Não foi identificado um arquivo de IPC pelo nome**, o que não demonstra ausência de IPC no aplicativo.
+- Entre os arquivos diretamente sob `.vite/build` observados: `aboutWindow.js`, `buddy.js`, `claudePagePreview.js`, `computerUseTeach.js`, `computerUseWatchRecord.js`, `coworkArtifact.js`, `designWindow.js`, `findInPage.js` e diversos `index.chunk-*.js`.
+- Dependências e módulos observados: `node_modules/agent-base`, `node_modules/ws` (incluindo `websocket-server.js`, `receiver.js`, `sender.js`, `permessage-deflate.js`) e `node_modules/node-pty/lib/windowsConoutConnection.js`, `windowsPtyAgent.js`, `windowsTerminal.js`.
+
+### Interpretação e limites
+
+A presença de `ws` comprova que o pacote inclui uma implementação de WebSocket, **não** que uma conexão WebSocket esteja ativa ou que seja utilizada para IPC. Os nomes `computerUseTeach` e `computerUseWatchRecord` sugerem funcionalidades relacionadas a uso do computador, mas não revelam o comportamento nem comprovam gravação de tela. Arquivos `index.chunk-*.js` são artefatos de build; o filtro por nomes não identifica suas responsabilidades.
+
+### Aplicações para REZ A.I (propostas)
+
+1. Projetar um protocolo próprio de IPC para o futuro desktop com canais allowlisted, validação de payload e autorização no processo privilegiado.
+2. Para o website, usar endpoints autenticados e, quando necessário, streaming ou WebSocket com controles de origem, autenticação e limites de recursos.
+3. Construir adaptadores próprios para terminal Windows, com sandbox, consentimento e trilha de auditoria.
+4. Projetar interfaces independentes para visualização, busca e consentimento, sem depender dos bundles proprietários observados.
+5. Criar testes de IPC malformado, chamadas sem autorização, injeção de instruções por conteúdo externo e limites de execução.
+
+**Próximo passo:** estudar APIs públicas do Electron e protocolos documentados, em vez de copiar ou redistribuir JavaScript compilado do Claude.
