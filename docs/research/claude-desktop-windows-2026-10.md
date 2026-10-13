@@ -386,3 +386,16 @@ A presença de `ws` comprova que o pacote inclui uma implementação de WebSocke
 **Limites:** a busca externa filtrou nomes contendo `mcp|pdf|msal` e mostrou apenas arquivos acessíveis pelo `Get-ChildItem`; arquivos dentro do ASAR não aparecem necessariamente como arquivos independentes no disco. A presença de módulos não comprova inicialização, conexão ativa, autenticação nem permissões efetivas. A função de `mcp.kl0G36TA.js` não foi verificada.
 
 **Aplicação planejada na REZ A.I:** separar registro/configuração de conectores da execução, aplicar autorização por ferramenta e operação, solicitar confirmação para efeitos externos, limitar processos e registrar auditoria sem segredos. Não reutilizar executáveis proprietários nem assumir compatibilidade sem verificar protocolos públicos.
+
+
+## Décima terceira rodada — localização de módulo MCP em ion-dist
+
+**Fonte:** consulta somente leitura via PowerShell a `Get-ChildItem` e `Get-AuthenticodeSignature`.
+
+- Instalação consultada: `Claude_2.37337.1.0_x64__pzs8sxrjxfjjc`, versão diferente da `2.31226.1` das primeiras rodadas. Comparações entre rodadas devem considerar a atualização do aplicativo.
+- Caminho relativo: `app/resources/ion-dist/_frame-rt/_runtime/mcp.kl0G36TA.js`.
+- Tamanho: **8.552 bytes**.
+- `Get-AuthenticodeSignature`: **NotSigned** para esse arquivo JavaScript individual. Isso não demonstra comprometimento, nem determina a assinatura do pacote/aplicativo.
+- O nome `mcp` e o caminho `ion-dist` não demonstram por si só a finalidade, execução, privilégios ou conexão com os hosts MCP de `.vite/build/mcp-runtime`.
+
+**Próximo passo seguro:** inspecionar apenas metadados de arquivos e permissões da instalação; não executar scripts internos nem acessar credenciais, tokens ou dados privados de usuários.
