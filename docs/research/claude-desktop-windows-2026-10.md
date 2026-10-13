@@ -225,3 +225,15 @@ O campo `SignerCertificate.Subject` continha `CN="Anthropic, PBC", O="Anthropic,
 - Consultar os metadados de assinatura do executável principal e manifesto MSIX/Appx.
 - Investigar a política de atualização do próprio projeto REZ a partir de documentação oficial de Electron/Windows.
 - Construir um protótipo próprio de verificação de atualização assinada, com testes de adulteração.
+
+
+## Quinta rodada — assinatura do executável principal
+
+O usuário executou `Get-AuthenticodeSignature` para o caminho `$claude/app/claude.exe`. A saída do PowerShell reportou:
+
+- `Status: Valid`
+- `SignerCertificate.Subject`: `CN="Anthropic, PBC", O="Anthropic, PBC", L=San Francisco, S=California, C=US`, com atributos adicionais de registro corporativo.
+
+O comando `Get-AppxPackage -Name "Claude" | Select-Object Name, Version, Publisher, SignatureKind, IsFramework` **não exibiu uma linha de identidade do pacote** na saída fornecida. Não inferir daí a versão atual, a identidade do publisher do pacote, nem a causa da ausência.
+
+**Aplicação na REZ:** para o futuro instalador desktop, adotar assinatura digital e verificação de integridade de binários e atualizações. Isso é uma meta de engenharia, não uma funcionalidade já implementada. Assinatura válida não prova ausência de vulnerabilidades nem comprova isolamento dos processos.
