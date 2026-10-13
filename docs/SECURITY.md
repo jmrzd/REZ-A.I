@@ -46,3 +46,25 @@ O MVP é experimental e não deve ser publicado na internet como serviço multiu
 - [ ] Revisão de acessibilidade e permissões do microfone.
 
 **Reporte vulnerabilidades de modo responsável e evite publicar segredos em issues.** Será criado um canal específico de reporte quando o projeto estiver maduro.
+
+## Primeira implementação de política de execução (OS Agent)
+
+O arquivo `os-agent/policy.py` introduz uma camada **fail-closed** entre interpretação de comando e abertura de sites:
+
+- Ações reconhecidas por enum; ações desconhecidas recusadas.
+- Apenas `open_approved_site` está autorizada; leitura/escrita/remoção de arquivos, instalação e execução de shell estão **bloqueadas**, sem executor.
+- URLs aprovadas por igualdade exata a catálogo definido no código. URLs externas, lookalikes, queries e esquemas não HTTPS são recusados.
+- Política imutável em tempo de execução e sinalizador `emergency_stop` para bloquear novas ações, quando configurado por código confiável.
+- Suíte de testes unitários de negação, catálogo, parada de emergência e regressão.
+- O motor de linguagem natural futuro **não** poderá conceder a si mesmo permissões.
+
+**Limites importantes:** isso ainda não é um sandbox de SO; um navegador pode redirecionar ao abrir uma URL autorizada; não existe processo separado, isolamento de plugins, controle de credenciais, ponte autenticada ou parada de processos já em execução. O sinalizador de emergência previne **novas** ações nesta API, não mata processos externos. A proteção contra prompt injection é por **separação de execução e allowlist**, não por garantia absoluta contra todas as formas de ataque.
+
+### Regras antes de implementar novos executores
+
+1. Não adicionar ações de escrita/instalação à política padrão.
+2. Exigir ação estruturada, schema estrito, autorização independente e testes negativos.
+3. Para arquivos: selecionar pasta pelo usuário, validar caminho final e symlinks, criar cópias de segurança e salvar atomicamente.
+4. Para instalações: validar editor/identidade, origem, assinatura e solicitar aprovação humana antes da execução.
+5. Para interface web↔agente: autenticação, origem, proteção contra CSRF, canais locais e limite de solicitações.
+6. Testar em Windows e Linux em ambientes isolados antes de permitir alterações reais.

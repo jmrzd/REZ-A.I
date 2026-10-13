@@ -10,6 +10,8 @@ import webbrowser
 from dataclasses import dataclass
 from typing import Callable
 
+from policy import Action, SecurityPolicy
+
 SITES = {
     "gmail": "https://mail.google.com/",
     "google mail": "https://mail.google.com/",
@@ -46,10 +48,19 @@ def resolve(command: str) -> str | None:
     phrase = " ".join(remaining)
     return SITES.get(phrase)
 
-def execute(command: str, opener: Callable[[str], bool] = webbrowser.open) -> Result:
+def execute(
+    command: str,
+    opener: Callable[[str], bool] = webbrowser.open,
+    policy: SecurityPolicy | None = None,
+) -> Result:
     url = resolve(command)
     if not url:
         return Result(False, "Comando não reconhecido. Experimente: Rez, abre o Gmail.")
+    decision = (policy if policy is not None else SecurityPolicy()).authorize(
+        Action.OPEN_APPROVED_SITE, url
+    )
+    if not decision.allowed:
+        return Result(False, decision.reason)
     try:
         opened = opener(url)
     except Exception:

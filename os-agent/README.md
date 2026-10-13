@@ -28,8 +28,9 @@ O protótipo usa somente a biblioteca padrão do Python. Não requer permissões
 
 ## Segurança e limites
 
-- Os sites são fixos e auditáveis no dicionário `SITES` em `agent.py`.
-- Comandos não reconhecidos são rejeitados; não há execução de comandos de terminal ou manipulação de arquivos.
+- Os sites são fixos e auditáveis no dicionário `SITES` em `agent.py`, com catálogo separado em `policy.py` (a suíte verifica a correspondência).
+- Todo comando reconhecido passa por `SecurityPolicy.authorize()`; ações desconhecidas, URLs fora da allowlist, instalações, shell e manipulação de arquivos são bloqueados por padrão.
+- A política é imutável; `emergency_stop=True` bloqueia novas ações, mas não fecha abas já abertas. Essa flag ainda não possui botão de interface.
 - Não captura áudio, não acessa e-mails, não usa credenciais e não instala serviço de inicialização automática.
 - Abrir Gmail não equivale a ler a conta: a autenticação acontece normalmente no navegador.
 - Comandos simples em português, inglês e espanhol são suportados; **não** é compreensão multilíngue geral.
@@ -42,3 +43,11 @@ O protótipo usa somente a biblioteca padrão do Python. Não requer permissões
 3. Adicionar reconhecimento de fala e hotkey de ativação;
 4. Implementar adaptadores Linux (incluindo ambientes Wayland);
 5. Acrescentar aplicativos locais e controles por sistema operacional com permissões granulares.
+
+## Arquivos de segurança
+
+- `policy.py`: enum de ações, catálogo de URLs e autorização com negação por padrão.
+- `tests/test_agent.py`: regressão e testes de segurança.
+- `../docs/SECURITY.md`: ameaças, limites e futuras salvaguardas.
+
+**Atenção:** esta fase não autoriza acesso a arquivos locais, instalações, controle do desktop nem operação remota. Não executar o agente como administrador.
