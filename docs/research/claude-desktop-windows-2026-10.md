@@ -367,3 +367,22 @@ A presença de `ws` comprova que o pacote inclui uma implementação de WebSocke
 **Limites da evidência:** a existência dos caminhos confirma apenas o empacotamento. Os nomes sugerem busca de transcrições, indexação, execução MCP, terminal, Microsoft 365 e PDF, mas não comprovam execução em tempo real, funcionalidades expostas ao usuário, privilégios ou desenho exato de IPC.
 
 **Aplicações propostas para REZ A.I:** (1) serviços/filas separados para indexação e busca na memória com controles de acesso; (2) runtime MCP original com registro de ferramentas, allowlist e consentimento; (3) terminal isolado, sem execução direta de comandos sugeridos por modelos; (4) processamento de PDF isolado e com limites de recursos; (5) telemetria de tarefas lentas sem capturar segredos. Todos esses itens permanecem **planejados**, não implementados.
+
+
+## Décima segunda rodada — distribuição e tamanhos de recursos MCP
+
+**Fonte:** listagem de caminhos de `app.asar` e `Get-ChildItem` recursivo, somente leitura, em `app/resources` da instalação Windows.
+
+**Caminhos presentes na listagem ASAR:** `.vite/build/mcp-runtime/directMcpHost.js`, `.vite/build/mcp-runtime/nodeHost.js`, `resources/github-mcp/github-mcp-server.exe`, `resources/office365-mcp/msal-node-runtime.node`, `msalruntime.dll`, `office365-mcp-stdio.mjs`, `pdf.worker.mjs` e `pdfExtractorProcess.mjs`.
+
+**Arquivos externos encontrados por nome e tamanho (bytes):**
+| Arquivo | Bytes |
+| --- | ---: |
+| `github-mcp-server.exe` | 20.566.352 |
+| `msal-node-runtime.node` | 365.904 |
+| `msalruntime.dll` | 3.261.536 |
+| `mcp.kl0G36TA.js` | 8.552 |
+
+**Limites:** a busca externa filtrou nomes contendo `mcp|pdf|msal` e mostrou apenas arquivos acessíveis pelo `Get-ChildItem`; arquivos dentro do ASAR não aparecem necessariamente como arquivos independentes no disco. A presença de módulos não comprova inicialização, conexão ativa, autenticação nem permissões efetivas. A função de `mcp.kl0G36TA.js` não foi verificada.
+
+**Aplicação planejada na REZ A.I:** separar registro/configuração de conectores da execução, aplicar autorização por ferramenta e operação, solicitar confirmação para efeitos externos, limitar processos e registrar auditoria sem segredos. Não reutilizar executáveis proprietários nem assumir compatibilidade sem verificar protocolos públicos.
