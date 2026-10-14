@@ -706,3 +706,16 @@ As categorias `Funcao`, `Objeto` e `Outro` tiveram zero ocorrências nos arquivo
 - **Limitações:** resultados são busca textual heurística sobre bundles minificados e dependências; não recuperam fontes originais, serviços remotos, configurações de runtime ou segurança efetiva.
 
 **Aplicação para REZ A.I:** priorizar arquitetura original com contrato IPC tipado, validação de payloads e allowlist, autorização explícita por ferramenta, separação de workers, observabilidade, MCP opcional e armazenamento seguro. Implementar e testar no próprio repositório sem copiar código proprietário.
+
+
+## Reconstrução local — relatórios recebidos (14/10/2026)
+
+**Entradas:** `RELATORIO-RECUPERACAO.md`, `01-arquivos-js.csv`, `02-sourcemaps.csv`, `03-binarios-cabecalhos.csv`, `04-avisos.csv` e script do analisador local. Sem copiar código proprietário para o repositório.
+
+- 425 JavaScript, 39.571.404 bytes; 423 formatados com Prettier, 2 pulados **somente por limite de tamanho de 6 MB**: `.vite/build/index.chunk-CHpJbW9_.js` (6.997.967 bytes) e `resources/office365-mcp/office365-mcp-stdio.mjs` (7.288.531 bytes).
+- 370 referências `sourceMappingURL` reportadas; 0 mapas separados, 0 mapas encontrados/validados, 0 fontes originais recuperadas. O arquivo `02-sourcemaps.csv` lista 370 referências relativas ausentes. Formatador não reconstitui nomes originais, comentários ou TypeScript.
+- 6 binários nativos identificados por cabeçalho **PE x64**: `node_modules/@ant/claude-native/claude-native-binding.node` (3.778.896 bytes, 6 seções); `node_modules/node-pty/prebuilds/win32-x64/conpty.node` (312.144 bytes, 8 seções); `conpty_console_list.node` (155.472 bytes, 8 seções); `resources/github-mcp/github-mcp-server.exe` (20.566.352 bytes, 8 seções); `resources/office365-mcp/msal-node-runtime.node` (365.904 bytes, 8 seções); `resources/office365-mcp/msalruntime.dll` (3.261.536 bytes, 7 seções). Cabeçalhos PE não são desassemblagem.
+- Zero avisos reportados.
+- O script `REZ_analisador_local.js` usa Prettier para análise sintática, lê cabeçalhos binários, procura comentários `sourceMappingURL`, e não executa JS do aplicativo. A detecção de `sourceMappingURL` usa regex de comentário de linha, portanto não cobre todos os formatos possíveis.
+
+**Próxima etapa técnica:** opcionalmente reexecutar a formatação local com limite 12 MB (atenção à memória) e estudar contratos IPC e permissões a partir de padrões, sem exportar fonte do Claude. Priorizar implementação original REZ.
