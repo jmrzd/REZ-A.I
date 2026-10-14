@@ -60,8 +60,12 @@ RETURNING id
 """
 
 
-def owner_params(user_id: UUID, **extra: object) -> dict[str, object]:
-    """Build driver parameters, preventing a caller from overriding owner."""
+def owner_params(owner_id: UUID, **extra: object) -> dict[str, object]:
+    """Build driver parameters, preventing a caller from overriding owner.
+
+    The positional argument is deliberately named owner_id rather than
+    user_id so a conflicting user_id keyword reaches the explicit guard.
+    """
     if "user_id" in extra:
         raise InvalidOwner("Owner cannot be overridden")
-    return {**extra, "user_id": require_owner(user_id)}
+    return {**extra, "user_id": require_owner(owner_id)}
