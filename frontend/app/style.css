@@ -24,3 +24,13 @@
 .permissionDeny{border:1px solid #685263;background:#2b1b29;color:#ffc9d6;border-radius:9px;padding:10px 14px;font-size:12px}
 .permissionDeny:hover{background:#432333}
 @media(max-width:700px){.headerControls{gap:6px}.permissionsToggle{padding:10px}.permissionsToggle span{display:none}.permissionsPanel{width:calc(100% - 24px);padding:13px;max-height:54dvh}.permissionRequest dl{grid-template-columns:1fr;gap:4px}.permissionRequest dt:not(:first-child){margin-top:9px}.permissionActions{gap:8px}.permissionActions button{flex:1}}
+
+
+/* Accessible, viewport-centered permission dialog; actions remain visible. */
+.permissionsBackdrop{position:fixed;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.76);padding:18px;backdrop-filter:blur(6px)}
+.permissionsBackdrop .permissionsPanel{width:min(680px,100%);max-height:min(680px,calc(100dvh - 36px));margin:0;display:flex;flex-direction:column;overflow-y:auto;overscroll-behavior:contain;box-shadow:0 24px 90px #000c;scrollbar-width:thin}
+.permissionsBackdrop .permissionsTop{position:sticky;top:-18px;background:#14111d;padding:12px 0;z-index:2;flex-shrink:0}
+.permissionsBackdrop .permissionRequest{display:flex;flex-direction:column;min-height:0}
+.permissionsBackdrop .permissionRequest dl{overflow:auto;min-height:0;max-height:230px;padding-right:8px}
+.permissionsBackdrop .permissionActions{position:sticky;bottom:-18px;background:#14111d;padding:14px 0 2px;margin-top:auto;border-top:1px solid #453954;z-index:2}
+@media(max-width:700px){.permissionsBackdrop{padding:10px}.permissionsBackdrop .permissionsPanel{max-height:calc(100dvh - 20px)}.permissionsBackdrop .permissionsTop{top:-13px}.permissionsBackdrop .permissionActions{bottom:-13px}.permissionsBackdrop .permissionRequest dl{max-height:28dvh}}
