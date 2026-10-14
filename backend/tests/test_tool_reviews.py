@@ -92,5 +92,20 @@ class ToolReviewTests(unittest.TestCase):
             self.queue.review("session-1", "call-1", approved=True)
 
 
+    def test_revoked_session_cannot_submit_new_requests(self):
+        self.queue.revoke_session("session-1")
+        with self.assertRaises(PermissionDenied):
+            self.queue.submit(self.call)
+
+    def test_revoking_one_session_preserves_another(self):
+        self.queue.revoke_session("session-1")
+        other = ToolCall("session-2", "call-1", "rez__demo__echo", {"message": "ok"})
+        self.queue.submit(other)
+        self.assertEqual(
+            self.queue.review("session-2", "call-1", approved=True),
+            {"message": "ok"},
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
