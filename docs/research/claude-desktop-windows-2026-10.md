@@ -501,3 +501,22 @@ A presença de `ws` comprova que o pacote inclui uma implementação de WebSocke
 - **Correção interpretativa:** as contagens das rodadas 17–19 não devem ser tratadas como confirmação de `webPreferences.sandbox` ou `webPreferences.contextIsolation`. O estado efetivo permanece não verificado.
 
 **Próxima ação:** buscar configuração de `BrowserWindow`/`webPreferences` nos pontos de criação da janela, preferencialmente produzindo apenas um resumo de propriedades e valores não sensíveis.
+
+
+## Vigésima primeira rodada — arquivos com referência a webPreferences
+
+**Fonte:** busca textual somente leitura por `webPreferences` nos arquivos JavaScript sob `.vite/build`, Claude Desktop 2.37337.1.
+
+| Arquivo | Tamanho aproximado (KB) |
+| --- | ---: |
+| `index.chunk-CHpJbW9_.js` | 6834 |
+| `index.chunk-o_T7PadS.js` | 50,9 |
+| `index.chunk-D55C7xaU.js` | 40,6 |
+| `index.chunk-CFtIIcWC.js` | 12,7 |
+| `index.chunk-BZ1q5Elx.js` | 9,6 |
+| `index.chunk-DeyJH3BC.js` | 9,4 |
+| `index.chunk-CMqgVhx6.js` | 1,8 |
+
+**Interpretação:** sete arquivos contêm a string `webPreferences`. O arquivo maior é candidato prioritário para inspecionar configurações, mas o tamanho e a ocorrência textual não provam que ele crie janelas nem revelam valores efetivos.
+
+**Próxima etapa:** analisar somente nomes e valores simples das propriedades próximas de `webPreferences`, evitando publicar código proprietário ou conteúdo sensível.
