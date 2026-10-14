@@ -520,3 +520,22 @@ A presença de `ws` comprova que o pacote inclui uma implementação de WebSocke
 **Interpretação:** sete arquivos contêm a string `webPreferences`. O arquivo maior é candidato prioritário para inspecionar configurações, mas o tamanho e a ocorrência textual não provam que ele crie janelas nem revelam valores efetivos.
 
 **Próxima etapa:** analisar somente nomes e valores simples das propriedades próximas de `webPreferences`, evitando publicar código proprietário ou conteúdo sensível.
+
+
+## Vigésima segunda rodada — referências a opções de webPreferences
+
+**Fonte:** PowerShell, busca textual nos arquivos JavaScript de `.vite/build` (Claude Desktop 2.37337.1). Contagem de `webPreferences\s*:` e presença de opções `nome\s*:` em cada **arquivo inteiro**.
+
+| Arquivo | webPreferences | Opções encontradas |
+| --- | ---: | --- |
+| `index.chunk-CHpJbW9_.js` | 27 | sandbox, contextIsolation, nodeIntegration, preload, partition |
+| `index.chunk-BZ1q5Elx.js` | 1 | sandbox, contextIsolation, nodeIntegration, preload |
+| `index.chunk-o_T7PadS.js` | 1 | sandbox, contextIsolation, nodeIntegration, preload |
+| `index.chunk-D55C7xaU.js` | 1 | sandbox, contextIsolation, nodeIntegration |
+| `index.chunk-DeyJH3BC.js` | 1 | sandbox, contextIsolation, nodeIntegration |
+| `index.chunk-CFtIIcWC.js` | 1 | preload |
+| `index.chunk-CMqgVhx6.js` | 1 | preload |
+
+**Limite crítico:** a presença de opções no mesmo arquivo não prova que estejam dentro do mesmo objeto `webPreferences`. Não há confirmação de valores nem da configuração efetiva das janelas.
+
+**Próxima etapa:** extrair apenas pares nome/valor booleano próximos das ocorrências de `webPreferences:` para orientar análise, sem compartilhar código-fonte extraído.
