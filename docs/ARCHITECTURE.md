@@ -145,3 +145,12 @@ Próxima etapa antes de conectar o frontend: autenticação de identidade verifi
 Antes de construir rotas HTTP: estabelecer login verificado, política de cookies HttpOnly/SameSite, CSRF e validação de Origin, acesso por identidade, limites/rate limit, logs e estratégia de revogação distribuída. Não conectar diretamente o botão do laboratório à função `decide`.
 
 **Verificação ainda pendente:** os 58 testes anteriores foram confirmados no Windows; os 11 novos devem ser executados com `python -m unittest discover -s tests -v`, total esperado de 69.
+
+
+## Autenticação local — primitiva de credenciais (14/10/2026)
+
+`backend/credentials.py` implementa hash e verificação de senhas com PBKDF2-HMAC-SHA256, salt aleatório de 16 bytes, 600.000 iterações, formato versionado e comparação de digest por `hmac.compare_digest`. O formato é `pbkdf2_sha256$iteracoes$salt_base64$hash_base64`. Senhas vazias, acima de 1024 bytes e hashes malformados são rejeitados. `backend/tests/test_credentials.py` adiciona 10 testes unitários.
+
+**Limites essenciais:** isto **não implementa login** nem vincula a senha a uma identidade, e não cria endpoints. Nenhum segredo deve ser commitado no GitHub. Antes de expor autenticação pela rede, ainda precisamos de armazenamento de credenciais fora do código, rate limiting contra tentativas de adivinhação, HTTPS, cookies seguros, proteção CSRF/Origin, política de recuperação e persistência/revogação de sessões. A autenticação não é autorização humana de uma chamada de ferramenta; essas decisões continuam separadas. O PBKDF2 foi escolhido pela disponibilidade na biblioteca padrão; avaliar Argon2id com dependência auditada antes de produção.
+
+**Validação:** os 69 testes anteriores foram confirmados pelo usuário; os 10 novos precisam ser executados no Windows (total esperado: 79). Nenhum teste de integração HTTP ou build frontend foi executado nesta atualização.
