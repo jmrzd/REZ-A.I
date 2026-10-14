@@ -452,3 +452,19 @@ A presença de `ws` comprova que o pacote inclui uma implementação de WebSocke
 **Limites:** o inventário não recupera fontes TypeScript originais; o mapa de strings não prova fluxos de controle, valores de segurança ou comportamento efetivo. A pesquisa deve continuar por trechos pequenos, revisados para evitar credenciais e código proprietário, sem subir fontes extraídas ao GitHub.
 
 **Próxima investigação sugerida:** verificar os parâmetros de `webPreferences` nos módulos `mainWindow.js` e `quickWindow.js` e a interface IPC exposta por preloads, com resultados resumidos e sem reproduzir código.
+
+
+## Décima sétima rodada — contagem de referências de segurança por janela
+
+**Fonte:** PowerShell `Get-Content -Raw` + contagem literal de strings nos arquivos extraídos `.vite/build/mainWindow.js` e `.vite/build/quickWindow.js` (Claude Desktop 2.37337.1).
+
+| String | mainWindow.js | quickWindow.js |
+| --- | ---: | ---: |
+| `sandbox` | 2 | 2 |
+| `contextIsolation` | 1 | 1 |
+| `nodeIntegration` | 0 | 0 |
+| `webSecurity` | 0 | 0 |
+
+**Limites:** são contagens de ocorrências textuais, não valores de `webPreferences`, estados efetivos das janelas ou provas de sandbox. Ausência de string não significa opção desativada; defaults, outros módulos e configurações de runtime podem intervir.
+
+**Próximo passo:** obter apenas valores literais e contexto mínimo das opções `sandbox` e `contextIsolation`, com cuidado para não publicar código proprietário.
