@@ -653,3 +653,23 @@ A presença de `ws` comprova que o pacote inclui uma implementação de WebSocke
 **Limitações:** `dinâmico/indeterminado` significa apenas que o primeiro argumento não começa com aspas. Pode ser uma constante estática, identificador minificado ou expressão. Nenhum nome de canal ou código extraído foi armazenado.
 
 **Aplicação original REZ:** definir canais IPC próprios em constantes tipadas, validar argumentos e autorizar operações sensíveis no processo principal. Não aceitar nomes de canais arbitrários enviados pelo renderer.
+
+
+## Trigésima primeira rodada — tipos do primeiro argumento de ipcRenderer.invoke
+
+**Fonte:** PowerShell, classificação heurística dos argumentos de chamadas `ipcRenderer.invoke(` em cinco arquivos extraídos do Claude Desktop 2.37337.1.
+
+| Arquivo | Identificador | Literal | Total |
+| --- | ---: | ---: | ---: |
+| `mainView.js` | 1145 | 6 | 1151 |
+| `mainWindow.js` | 13 | 0 | 13 |
+| `quickWindow.js` | 13 | 0 | 13 |
+| `computerUseTeach.js` | 21 | 0 | 21 |
+| `localExecConsent.js` | 0 | 1 | 1 |
+| **Total** | **1192** | **7** | **1199** |
+
+As categorias `Funcao`, `Objeto` e `Outro` tiveram zero ocorrências nos arquivos examinados. Aproximadamente 99,4% das chamadas analisadas começam com um identificador. **Isso não prova que os canais estejam centralizados em constantes:** podem ser aliases de código empacotado, variáveis locais ou outras referências.
+
+**Aplicação original REZ:** criar contratos de canais IPC tipados e com validação de argumentos e autorização por ação. Não transportar identificadores, canais ou código proprietários da instalação analisada para o repositório público.
+
+**Próxima investigação:** distinguir padrões de identificadores simples, acesso a propriedade e aliases minificados, apresentando somente contagens.
