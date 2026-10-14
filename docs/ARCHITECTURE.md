@@ -71,3 +71,16 @@ Esses recursos **não estão ativos** no MVP. [REZ THINK](REZ_THINK.md) gerencia
 6. Estudar integração MCP com lista de ferramentas permitidas e testes de autorização.
 
 **Origem das ideias:** observações de pacotes e processos do Claude Desktop em [docs/research/claude-desktop-windows-2026-10.md](research/claude-desktop-windows-2026-10.md). Isso não autoriza copiar código proprietário nem implica que a arquitetura interna seja idêntica. Dependências encontradas na pesquisa não serão instaladas automaticamente sem um caso de uso, revisão de licença e avaliação de segurança.
+
+
+## REZ Permission Engine — primeira implementação (14/10/2026)
+
+**Implementado como módulo independente, ainda NÃO conectado à API, ao chat nem a qualquer executor de ferramentas:**
+
+- `backend/permissions.py`: identificadores de sessão/chamada/ferramenta, impressão digital dos argumentos JSON, aprovação explícita, recibos de uso único, expiração de 120 segundos configurável, bloqueios com padrões e revogação por sessão.
+- `backend/tests/test_permissions.py`: 12 testes unitários offline de negação padrão, uso único, alterações de argumento/ferramenta/sessão, prazo, bloqueio, revogação e validação.
+- Os 12 testes foram executados com sucesso em ambiente de trabalho isolado antes do envio ao GitHub; a suíte completa do repositório e a integração de ponta a ponta ainda não foram executadas.
+
+**Limites de segurança:** o parâmetro `human_confirmed` é uma pré-condição de integração, não comprova a identidade de uma pessoa por si só. Somente código confiável pode chamar `approve` após verificar a aprovação na interface autenticada. Não criar endpoint público que aceite uma flag de aprovação enviada pelo cliente. O motor armazena autorizações em memória de processo; reiniciar o processo descarta registros. Ações com efeitos colaterais exigirão camada de execução segura, autenticação, isolamento e auditoria antes de ativar ferramentas reais.
+
+**Próximas etapas:** integrar um catálogo de ferramentas explicitamente permitido, interface de consentimento autenticada, execução limitada e testes de integração; depois conectar um cliente MCP quando os controles forem validados.
