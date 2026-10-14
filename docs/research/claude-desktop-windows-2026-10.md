@@ -566,3 +566,18 @@ A presença de `ws` comprova que o pacote inclui uma implementação de WebSocke
 **Limitações:** o comando procura `nome\s*:` no arquivo inteiro, sem comprovar que as propriedades pertencem a `webPreferences`; as categorias de valor são heurísticas baseadas em prefixos, não uma análise sintática. A ausência de `true`/`false` literal **não revela os valores efetivos em execução**. A ocorrência `sandbox: {` pode se referir a outro objeto que não as opções de janela.
 
 **Recomendação para REZ Desktop:** estabelecer explicitamente as opções seguras do Electron na própria aplicação, validar o comportamento em testes e expor apenas uma API mínima via preload/contextBridge. Não deduzir a segurança da REZ a partir da configuração não confirmada de outro produto.
+
+
+## Vigésima sétima rodada — prefixos das expressões de segurança
+
+**Fonte:** PowerShell, `index.chunk-CHpJbW9_.js`, versão 2.37337.1. Classificação heurística do início do valor depois de `nome:` no arquivo inteiro.
+
+| Propriedade | Negação (`!`) | Identificador | Objeto | Chamada | Outro |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `sandbox` | 12 | 2 | 1 | 0 | 0 |
+| `contextIsolation` | 13 | 0 | 0 | 0 | 0 |
+| `nodeIntegration` | 13 | 0 | 0 | 0 | 0 |
+
+**Interpretação:** o prefixo `!` indica expressão de negação, mas seu resultado depende do operando; não se pode inferir `true` ou `false`. A busca não garante associação com objetos `webPreferences`, nem demonstra a configuração efetiva das janelas. A ocorrência `sandbox: {` pode ser alheia às opções de janela.
+
+**Encerramento da investigação textual de segurança:** resultados suficientes para orientar boas práticas, insuficientes para auditar o isolamento em tempo de execução do Claude. Para REZ Desktop, definir explicitamente `sandbox: true`, `contextIsolation: true`, `nodeIntegration: false`, `webSecurity: true` onde aplicável, uma API mínima de preload e testes de regressão; considerar requisitos específicos de recursos antes de implementar.
