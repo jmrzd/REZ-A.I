@@ -724,3 +724,8 @@ As categorias `Funcao`, `Objeto` e `Outro` tiveram zero ocorrências nos arquivo
 ## Formatação integral dos bundles JavaScript — 14/10/2026
 
 O usuário executou novamente `REZ_Reconstrucao_Local.ps1` com `-MaxFormatMB 12` na instalação local autorizada. Resultado de terminal: **425/425 arquivos JavaScript formatados**, **0 avisos**, **6 binários identificados**, **0 source maps válidos**, **0 fontes originais recuperadas**. Saída local: `Desktop/Claude-Research/REZ-Fonte-Local-20261014-000314`. Este resultado confirma apenas formatação bem-sucedida do código distribuído, não recuperação do repositório fonte nem dos serviços remotos. Próximo passo: análise estrutural estática de dependências, pontos de entrada, IPC, permissões e módulos nativos, com resultados agregados e sem publicar código proprietário.
+
+
+## Fluxo MCP e fallback — 14/10/2026
+
+Análise estática de trechos locais de `directMcpHost.js` enviados pelo usuário: o módulo recebe `addServer` com `MessagePort` e processa respostas de elicitation e autenticação; cria cliente MCP, seleciona transporte SSE quando configurado, negocia inicialização, descobre ferramentas via `listTools()`, aplica timeouts e fecha recursos em falhas. A função de fallback tenta primeiro a conexão com negociação de versão e, apenas se ela estiver habilitada e o erro satisfizer o predicado específico, tenta uma vez sem a negociação. Há uma fila de solicitações pendentes com identificadores sequenciais e cancelamento, além de uma política de fetch que rejeita redirecionamentos HTTP. Limitações: as condições completas de erro dependem de funções auxiliares ainda não analisadas; inspeção de código distribuído não demonstra execução real. Não foram copiados trechos proprietários.
