@@ -122,3 +122,14 @@ Fluxo: código confiável chama `submit(ToolCall)` → exibe dados de `pending(s
 **Próximo passo:** projetar sessão autenticada e contrato servidor-cliente em que o servidor crie a solicitação; o frontend apenas a apresenta e envia a decisão vinculada a uma identidade/sessão comprovada. Exigir proteção contra CSRF e requisições forjadas, checagem de origem, não confiar em IDs ou ferramentas informados pelo cliente, auditoria e testes HTTP antes de ligar a execução. **Não** expor aprovação anônima pela API.
 
 **Estado de testes:** a suíte de 49 testes anteriores foi executada pelo usuário no Windows e passou. Esta mudança de frontend foi commitada, mas o build Next.js e testes de navegador ainda precisam ser executados localmente.
+
+
+## Fase 3 — modal de consentimento e base isolada de sessão (14/10/2026)
+
+O laboratório em `frontend/app/ToolApprovalDemo.tsx` foi convertido em modal (`role="dialog"`, `aria-modal`, título vinculado, foco inicial, ciclo de Tab e fechamento com Escape). O CSS exibe a janela sobre o chat e mantém os botões de decisão acessíveis ao rolar conteúdo. **A aprovação continua totalmente simulada** e não executa ferramentas.
+
+`backend/sessions.py` introduz uma classe isolada `SessionStore`: token criptograficamente aleatório, somente hash SHA-256 do token armazenado, identidade vinculada, expiração, revogação e limpeza explícita. `backend/tests/test_sessions.py` inclui nove casos unitários. **Ainda não é um sistema de autenticação:** somente um controlador que já tenha autenticado uma pessoa pode emitir token; nenhuma rota HTTP de login, aprovação ou execução foi adicionada. Os tokens são bearer, válidos apenas neste processo, sem persistência; reinícios e múltiplos workers não compartilham estado. A implementação não protege contra XSS, CSRF, roubo de token, falta de rate limit ou autorização de ações reais.
+
+Próxima etapa antes de conectar o frontend: autenticação de identidade verificável, sessão protegida e CSRF/origin checks, controlador vinculado à sessão que seja a única autoridade sobre decisões, limites de recursos e integração testada ponta a ponta. Não expor `issue()` ou `review(... approved=True)` diretamente ao usuário ou ao modelo.
+
+**Validação pendente:** o usuário confirmou a suíte anterior de 49 testes; os nove testes de sessões e o build atualizado do frontend devem ser rodados no Windows após `git pull`.
