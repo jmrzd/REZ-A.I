@@ -636,3 +636,20 @@ A presença de `ws` comprova que o pacote inclui uma implementação de WebSocke
 **Aplicação original na REZ:** especificar API de `contextBridge` pequena, operações IPC tipadas, validação e autorização no processo principal; separar permissões para execução local, arquivos e uso do computador.
 
 **Próxima etapa:** estimar quantidade de canais literais por arquivo sem imprimir nomes ou código proprietário; distinguir nomes estáticos de canais dinâmicos.
+
+
+## Trigésima rodada — canais IPC literais versus expressões
+
+**Fonte:** PowerShell, inspeção textual de `ipcRenderer.invoke/send/on` e `ipcMain.handle` em arquivos selecionados do Claude Desktop 2.37337.1.
+
+- `mainView.js`: `invoke` 6 canais com argumento inicial entre aspas e 1145 dinâmicos/indeterminados (total 1151); `on` 1 literal e 174 indeterminados (total 175); `send` 0 literal e 1 indeterminado.
+- `mainWindow.js`: `invoke` 0 literal / 13 indeterminados; `on` 0 / 4.
+- `quickWindow.js`: `invoke` 0 / 13; `on` 0 / 4.
+- `computerUseTeach.js`: `invoke` 0 / 21; `on` 0 / 12.
+- `localExecConsent.js`: `invoke` 1 literal / 0 indeterminados.
+- `index.pre.js`: nenhum dos padrões específicos procurados apareceu no relatório.
+- **Problema de apresentação:** a linha `Invoke: 1` e `On: 1` para `mainView.js` conflita com as somas 1151 e 175; tratar os totais derivados das categorias como provisórios e confirmar em próxima execução. O código compartilhado pelo usuário era baseado em `$matches.Count`, mas a saída exibida não refletiu esses totais.
+
+**Limitações:** `dinâmico/indeterminado` significa apenas que o primeiro argumento não começa com aspas. Pode ser uma constante estática, identificador minificado ou expressão. Nenhum nome de canal ou código extraído foi armazenado.
+
+**Aplicação original REZ:** definir canais IPC próprios em constantes tipadas, validar argumentos e autorizar operações sensíveis no processo principal. Não aceitar nomes de canais arbitrários enviados pelo renderer.
