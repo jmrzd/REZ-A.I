@@ -719,3 +719,8 @@ As categorias `Funcao`, `Objeto` e `Outro` tiveram zero ocorrências nos arquivo
 - O script `REZ_analisador_local.js` usa Prettier para análise sintática, lê cabeçalhos binários, procura comentários `sourceMappingURL`, e não executa JS do aplicativo. A detecção de `sourceMappingURL` usa regex de comentário de linha, portanto não cobre todos os formatos possíveis.
 
 **Próxima etapa técnica:** opcionalmente reexecutar a formatação local com limite 12 MB (atenção à memória) e estudar contratos IPC e permissões a partir de padrões, sem exportar fonte do Claude. Priorizar implementação original REZ.
+
+
+## Formatação integral dos bundles JavaScript — 14/10/2026
+
+O usuário executou novamente `REZ_Reconstrucao_Local.ps1` com `-MaxFormatMB 12` na instalação local autorizada. Resultado de terminal: **425/425 arquivos JavaScript formatados**, **0 avisos**, **6 binários identificados**, **0 source maps válidos**, **0 fontes originais recuperadas**. Saída local: `Desktop/Claude-Research/REZ-Fonte-Local-20261014-000314`. Este resultado confirma apenas formatação bem-sucedida do código distribuído, não recuperação do repositório fonte nem dos serviços remotos. Próximo passo: análise estrutural estática de dependências, pontos de entrada, IPC, permissões e módulos nativos, com resultados agregados e sem publicar código proprietário.
