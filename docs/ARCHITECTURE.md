@@ -84,3 +84,16 @@ Esses recursos **não estão ativos** no MVP. [REZ THINK](REZ_THINK.md) gerencia
 **Limites de segurança:** o parâmetro `human_confirmed` é uma pré-condição de integração, não comprova a identidade de uma pessoa por si só. Somente código confiável pode chamar `approve` após verificar a aprovação na interface autenticada. Não criar endpoint público que aceite uma flag de aprovação enviada pelo cliente. O motor armazena autorizações em memória de processo; reiniciar o processo descarta registros. Ações com efeitos colaterais exigirão camada de execução segura, autenticação, isolamento e auditoria antes de ativar ferramentas reais.
 
 **Próximas etapas:** integrar um catálogo de ferramentas explicitamente permitido, interface de consentimento autenticada, execução limitada e testes de integração; depois conectar um cliente MCP quando os controles forem validados.
+
+
+## REZ Tools Engine — catálogo e executor isolado (14/10/2026)
+
+**Código adicionado, mas ainda sem integração à API HTTP ou ao frontend:**
+
+- `backend/tools_engine.py`: `ToolSpec`, `ToolRegistry`, validação estrita de argumentos (somente chaves registradas, valores string com até 1000 caracteres) e `ToolExecutor` que consulta o `PermissionEngine` antes de chamar um handler confiável.
+- `build_demo_registry()` registra exclusivamente `rez__demo__echo`, que devolve uma mensagem em memória e não realiza operações externas.
+- `backend/tests/test_tools_engine.py`: 12 cenários de testes para recusa de ferramentas desconhecidas, autorização, chamada única, validação de argumentos, registro duplicado e falha de handler.
+
+**Estado de validação:** arquivos enviados ao GitHub. Esses 12 novos testes ainda devem ser executados na instalação local/CI, junto com a suíte preexistente; nenhum deploy foi feito.
+
+**Limites:** este catálogo não é um cliente MCP e não confere segurança automaticamente a novos handlers. A confirmação humana não é autenticada por `human_confirmed=True` isoladamente: essa flag somente pode ser fornecida por um serviço confiável após verificação real da autorização. Não expor `approve` ou `execute` diretamente a solicitações do modelo ou a clientes anônimos. Para ferramenta de leitura/escrita/terminal serão necessários escopo, sandbox, autenticação, auditoria e cancelamento.
