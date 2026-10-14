@@ -489,3 +489,15 @@ A presença de `ws` comprova que o pacote inclui uma implementação de WebSocke
 - Isso não estabelece se a ocorrência é string, propriedade entre aspas, acesso a objeto, comentário ou outro caso. O estado efetivo das proteções permanece **indeterminado**.
 
 **Próximo passo:** coletar apenas contexto local curto para classificar a expressão, revisando a saída antes de compartilhar qualquer conteúdo potencialmente sensível.
+
+
+## Vigésima rodada — contexto real das strings de isolamento
+
+**Fonte:** trechos locais curtos extraídos com PowerShell dos arquivos `.vite/build/mainWindow.js` e `.vite/build/quickWindow.js`, versão 2.37337.1.
+
+- As duas ocorrências de `sandbox` em cada arquivo pertencem a mensagens de aviso sobre a criação de **iframe sandbox** para verificações de fetch; **não são evidência de configuração da sandbox de processos Electron**.
+- A ocorrência de `contextIsolation` em cada arquivo pertence a uma mensagem sobre código chamado em preload quando o isolamento de contexto está desativado. É uma referência textual a uma condição; **não demonstra que o isolamento esteja desativado na janela em execução**.
+- Os contextos observados são iguais nos dois arquivos.
+- **Correção interpretativa:** as contagens das rodadas 17–19 não devem ser tratadas como confirmação de `webPreferences.sandbox` ou `webPreferences.contextIsolation`. O estado efetivo permanece não verificado.
+
+**Próxima ação:** buscar configuração de `BrowserWindow`/`webPreferences` nos pontos de criação da janela, preferencialmente produzindo apenas um resumo de propriedades e valores não sensíveis.
