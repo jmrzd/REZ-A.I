@@ -154,3 +154,12 @@ Antes de construir rotas HTTP: estabelecer login verificado, política de cookie
 **Limites essenciais:** isto **não implementa login** nem vincula a senha a uma identidade, e não cria endpoints. Nenhum segredo deve ser commitado no GitHub. Antes de expor autenticação pela rede, ainda precisamos de armazenamento de credenciais fora do código, rate limiting contra tentativas de adivinhação, HTTPS, cookies seguros, proteção CSRF/Origin, política de recuperação e persistência/revogação de sessões. A autenticação não é autorização humana de uma chamada de ferramenta; essas decisões continuam separadas. O PBKDF2 foi escolhido pela disponibilidade na biblioteca padrão; avaliar Argon2id com dependência auditada antes de produção.
 
 **Validação:** os 69 testes anteriores foram confirmados pelo usuário; os 10 novos precisam ser executados no Windows (total esperado: 79). Nenhum teste de integração HTTP ou build frontend foi executado nesta atualização.
+
+
+## Autenticação local do proprietário — serviço interno (14/10/2026)
+
+`backend/local_auth.py` contém `LocalOwnerAuth`, que recebe um hash de senha **provisionado externamente**, valida credenciais via `credentials.verify_password`, emite sessões via `SessionStore` apenas em caso de sucesso, aplica bloqueio temporário após falhas consecutivas e permite revogar a sessão no logout. `backend/tests/test_local_auth.py` adiciona 12 testes (total esperado: 91).
+
+**Estado e limites:** é um serviço **interno, sem rotas HTTP nem formulário de login**. O bloqueio é apenas em memória e global à instância; não é adequado sozinho para aplicações expostas à Internet, múltiplos processos ou ataques distribuídos. Uma reinicialização limpa o bloqueio. Nunca adicionar hash real ou senha ao repositório. O logout deste serviço revoga o token; para também revogar revisões pendentes use `ToolSessionController.end_session(token)` antes de invalidar a sessão, em um fluxo coordenado. Não transmitir tokens à IA nem persistir tokens em localStorage. O próximo passo exige escolher explicitamente o modelo de implantação (somente localhost ou servidor remoto) antes de abrir login público, definir cookie HttpOnly/SameSite/Secure, CSRF/Origin, HTTPS, throttling persistente e política de recuperação.
+
+A interface pode se inspirar na simplicidade e no foco de produtos como Claude, mas a identidade visual, implementação e marca da REZ A.I devem permanecer próprias.
