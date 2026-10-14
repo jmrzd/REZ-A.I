@@ -550,3 +550,19 @@ A presença de `ws` comprova que o pacote inclui uma implementação de WebSocke
 - **Rodada 25:** em janelas de 400 caracteres após os candidatos a objetos diretos, ocorreram referências `sandbox`, `contextIsolation`, `nodeIntegration` e `preload` sem valores booleanos literais detectados. Não houve referência a `webSecurity` nem `partition` nas janelas examinadas. A saída recebida para o objeto 2 foi parcial; evitar atribuir contagens exatas por opção.
 - **Limitação:** as janelas textuais não respeitam os limites de objetos JavaScript. Uma referência detectada pode estar em objeto aninhado ou fora de `webPreferences`. Não inferir valores efetivos de segurança.
 - **Próximo passo:** análise sintática local mais robusta ou busca por contextos estruturais reduzidos; não publicar código proprietário extraído.
+
+
+## Vigésima sexta rodada — tipos heurísticos de valores das propriedades
+
+**Fonte:** PowerShell, busca textual no arquivo `index.chunk-CHpJbW9_.js`, Claude Desktop 2.37337.1.
+
+| Propriedade | Booleano literal | Expressão (heurística) | Função (heurística) | Objeto | Outro |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `sandbox` | 0 | 14 | 0 | 1 | 0 |
+| `contextIsolation` | 0 | 13 | 0 | 0 | 0 |
+| `nodeIntegration` | 0 | 13 | 0 | 0 | 0 |
+| `preload` | 0 | 14 | 0 | 0 | 0 |
+
+**Limitações:** o comando procura `nome\s*:` no arquivo inteiro, sem comprovar que as propriedades pertencem a `webPreferences`; as categorias de valor são heurísticas baseadas em prefixos, não uma análise sintática. A ausência de `true`/`false` literal **não revela os valores efetivos em execução**. A ocorrência `sandbox: {` pode se referir a outro objeto que não as opções de janela.
+
+**Recomendação para REZ Desktop:** estabelecer explicitamente as opções seguras do Electron na própria aplicação, validar o comportamento em testes e expor apenas uma API mínima via preload/contextBridge. Não deduzir a segurança da REZ a partir da configuração não confirmada de outro produto.
