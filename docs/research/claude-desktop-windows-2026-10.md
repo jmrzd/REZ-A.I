@@ -581,3 +581,36 @@ A presença de `ws` comprova que o pacote inclui uma implementação de WebSocke
 **Interpretação:** o prefixo `!` indica expressão de negação, mas seu resultado depende do operando; não se pode inferir `true` ou `false`. A busca não garante associação com objetos `webPreferences`, nem demonstra a configuração efetiva das janelas. A ocorrência `sandbox: {` pode ser alheia às opções de janela.
 
 **Encerramento da investigação textual de segurança:** resultados suficientes para orientar boas práticas, insuficientes para auditar o isolamento em tempo de execução do Claude. Para REZ Desktop, definir explicitamente `sandbox: true`, `contextIsolation: true`, `nodeIntegration: false`, `webSecurity: true` onde aplicável, uma API mínima de preload e testes de regressão; considerar requisitos específicos de recursos antes de implementar.
+
+
+## Vigésima oitava rodada — mapa textual IPC e processos
+
+**Fonte:** PowerShell, busca regex recursiva em arquivos `.js` de `.vite/build`, Claude Desktop 2.37337.1. Os valores representam ocorrências textuais; não são chamadas executadas, canais únicos nem contagem de processos.
+
+| Padrão | Ocorrências |
+| --- | ---: |
+| IPC Renderer | 1744 |
+| Invoke | 1263 |
+| Web Contents | 1029 |
+| Send | 151 |
+| Context Bridge | 52 |
+| Handle | 32 |
+| Process Spawn | 30 |
+| Message Port | 17 |
+| IPC Main | 13 |
+| Worker Threads | 11 |
+
+**Principais arquivos observados:**
+- `mainView.js`: IPC Renderer 1519; Invoke 1151; Context Bridge 22.
+- `index.chunk-CHpJbW9_.js`: Web Contents 861; Send 76; Handle 23; Process Spawn 12.
+- `computerUseTeach.js`: IPC Renderer 45; Invoke 21.
+- `computerUseWatchRecord.js`: IPC Renderer 32; Invoke 12.
+- `watchRecordChooser.js`: IPC Renderer 32; Invoke 12.
+- `quickWindow.js` e `mainWindow.js`: IPC Renderer 21 e Invoke 13 cada.
+- `directMcpHost.js`: Send 18.
+
+**Limitações:** as regex `\.invoke\s*\(`, `\.send\s*\(`, `\.handle\s*\(` e outras podem capturar APIs não relacionadas ao Electron, além de bibliotecas empacotadas. Os nomes dos arquivos são indícios de função, não prova de comportamento. Não se inferem topologia, canais IPC, permissões ou segurança somente das contagens.
+
+**Implicações de design originais para REZ:** projetar contrato IPC tipado e mínimo, `contextBridge` com API restrita, validação de entradas no processo principal, permissões explícitas para ações sensíveis, isolamento de workers e testes; manter backend FastAPI separado da interface.
+
+**Próxima pesquisa sugerida:** medir a distribuição dos padrões por arquivos e distinguir referências a `ipcRenderer.invoke`/`ipcMain.handle` de chamadas genéricas, apenas com estatísticas e sem publicar código extraído.
