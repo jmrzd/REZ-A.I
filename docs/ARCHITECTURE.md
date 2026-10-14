@@ -109,3 +109,16 @@ Fluxo: código confiável chama `submit(ToolCall)` → exibe dados de `pending(s
 **Atenção:** não há interface de aprovação, autenticação, armazenamento persistente, endpoint HTTP, conexão MCP ou execução de terminal/arquivos nesta fase. A chamada `review(..., approved=True)` não é por si mesma consentimento humano, e **nunca deve** ser exposta diretamente a pedidos de modelos ou clientes. A fila segura para testes em processo único não é uma solução distribuída/multiprocesso. Não instalar handlers com efeitos externos antes de revisar limites de concorrência, timeout, cancelamento, autenticação e isolamento.
 
 **Validação:** novos testes foram enviados, mas ainda não executados no computador do usuário. Executar `cd backend` e `python -m unittest discover -s tests -v`, confirmar resultado e só então considerar a suíte local validada.
+
+
+## Laboratório visual de permissões — interface experimental (14/10/2026)
+
+- `frontend/app/ToolApprovalDemo.tsx`: componente de demonstração que exibe nome, descrição, argumentos e ID de uma chamada fictícia `rez__demo__echo`. A pessoa pode decidir aprovar ou negar **somente a simulação**; uma segunda decisão é bloqueada, e uma nova solicitação gera um novo identificador.
+- `frontend/app/page.tsx`: botão **Permissões** no cabeçalho, que abre/fecha o laboratório sem interromper o chat.
+- `frontend/app/style.css`: visual responsivo, foco visível e labels para controles. Aviso explícito de que nenhuma ferramenta real é executada.
+
+**Barreira de segurança intencional:** a tela **não chama** `PermissionEngine.approve`, `ToolReviewQueue.review` ou qualquer endpoint. O estado é local ao navegador e não constitui consentimento verificável do backend. O modelo também não aciona esta tela automaticamente.
+
+**Próximo passo:** projetar sessão autenticada e contrato servidor-cliente em que o servidor crie a solicitação; o frontend apenas a apresenta e envia a decisão vinculada a uma identidade/sessão comprovada. Exigir proteção contra CSRF e requisições forjadas, checagem de origem, não confiar em IDs ou ferramentas informados pelo cliente, auditoria e testes HTTP antes de ligar a execução. **Não** expor aprovação anônima pela API.
+
+**Estado de testes:** a suíte de 49 testes anteriores foi executada pelo usuário no Windows e passou. Esta mudança de frontend foi commitada, mas o build Next.js e testes de navegador ainda precisam ser executados localmente.
