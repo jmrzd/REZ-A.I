@@ -468,3 +468,13 @@ A presença de `ws` comprova que o pacote inclui uma implementação de WebSocke
 **Limites:** são contagens de ocorrências textuais, não valores de `webPreferences`, estados efetivos das janelas ou provas de sandbox. Ausência de string não significa opção desativada; defaults, outros módulos e configurações de runtime podem intervir.
 
 **Próximo passo:** obter apenas valores literais e contexto mínimo das opções `sandbox` e `contextIsolation`, com cuidado para não publicar código proprietário.
+
+
+## Décima oitava rodada — busca por valores literais de isolamento
+
+**Fonte:** PowerShell sobre `.vite/build/mainWindow.js` e `.vite/build/quickWindow.js` extraídos da versão 2.37337.1.
+
+- Expressão procurada: `\b(sandbox|contextIsolation)\s*:\s*(true|false)` (uma propriedade por vez).
+- **Ambos os arquivos:** nenhum valor literal `true`/`false` encontrado para `sandbox` ou `contextIsolation`.
+- **Interpretação:** resultado inconclusivo. A configuração pode usar variável, propriedade entre aspas, sintaxe diferente, importação, atribuição posterior ou padrão do Electron. Não inferir que proteção esteja ativa ou inativa.
+- **Próximo passo:** coletar somente indicadores estruturais em torno dos nomes de propriedade (por exemplo, caractere após os dois-pontos), sem publicar código extraído.
