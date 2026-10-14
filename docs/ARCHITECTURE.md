@@ -97,3 +97,15 @@ Esses recursos **não estão ativos** no MVP. [REZ THINK](REZ_THINK.md) gerencia
 **Estado de validação:** arquivos enviados ao GitHub. Esses 12 novos testes ainda devem ser executados na instalação local/CI, junto com a suíte preexistente; nenhum deploy foi feito.
 
 **Limites:** este catálogo não é um cliente MCP e não confere segurança automaticamente a novos handlers. A confirmação humana não é autenticada por `human_confirmed=True` isoladamente: essa flag somente pode ser fornecida por um serviço confiável após verificação real da autorização. Não expor `approve` ou `execute` diretamente a solicitações do modelo ou a clientes anônimos. Para ferramenta de leitura/escrita/terminal serão necessários escopo, sandbox, autenticação, auditoria e cancelamento.
+
+
+## REZ Tool Review Queue — fluxo de aprovação isolado (14/10/2026)
+
+- `backend/tool_reviews.py`: fila em memória por sessão, visualização das solicitações pendentes, confirmação ou negação, prazo de revisão, congelamento dos argumentos para impedir alterações após a solicitação e revogação.
+- `backend/tests/test_tool_reviews.py`: 12 testes offline para fluxo completo, negação, expiração, isolamento entre sessões, replay, validação do catálogo e revogação.
+
+Fluxo: código confiável chama `submit(ToolCall)` → exibe dados de `pending(session_id)` na futura interface → controlador autenticado coleta consentimento explícito → chama `review(session_id, call_id, approved=...)` → em caso de aprovação, `PermissionEngine` concede recibo de uso único e `ToolExecutor` executa somente a ferramenta `rez__demo__echo`.
+
+**Atenção:** não há interface de aprovação, autenticação, armazenamento persistente, endpoint HTTP, conexão MCP ou execução de terminal/arquivos nesta fase. A chamada `review(..., approved=True)` não é por si mesma consentimento humano, e **nunca deve** ser exposta diretamente a pedidos de modelos ou clientes. A fila segura para testes em processo único não é uma solução distribuída/multiprocesso. Não instalar handlers com efeitos externos antes de revisar limites de concorrência, timeout, cancelamento, autenticação e isolamento.
+
+**Validação:** novos testes foram enviados, mas ainda não executados no computador do usuário. Executar `cd backend` e `python -m unittest discover -s tests -v`, confirmar resultado e só então considerar a suíte local validada.
