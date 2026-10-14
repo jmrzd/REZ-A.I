@@ -673,3 +673,20 @@ As categorias `Funcao`, `Objeto` e `Outro` tiveram zero ocorrências nos arquivo
 **Aplicação original REZ:** criar contratos de canais IPC tipados e com validação de argumentos e autorização por ação. Não transportar identificadores, canais ou código proprietários da instalação analisada para o repositório público.
 
 **Próxima investigação:** distinguir padrões de identificadores simples, acesso a propriedade e aliases minificados, apresentando somente contagens.
+
+
+## Mega auditoria estática — 13 de outubro de 2026
+
+**Origem:** cinco relatórios gerados localmente pelo auditor PowerShell sobre a instalação autorizada do Claude Desktop: `RELATORIO.md`, `resumo-tecnologias.csv`, `tecnologias-por-arquivo.csv`, `argumentos-ipc.csv` e `inventario-js.csv`. Não incluir os arquivos extraídos ou nomes de canais no repositório.
+
+**Cobertura:** 370 arquivos JavaScript encontrados e analisados; zero avisos. `tecnologias-por-arquivo.csv` contém 573 pares arquivo/categoria; `resumo-tecnologias.csv` contém 36 categorias; `argumentos-ipc.csv` contém 12 arquivos com invocações; `inventario-js.csv` contém 370 registros.
+
+**Totais textuais selecionados:** `session` 4993; `http` 1820; `Electron IPC Renderer` 1744; `IPC invoke direto` 1263; `MCP` 1198; `WebContents` 985; `permission` 615; `sandbox` 500; `IPC on direto` 230; `consent` 138; `safeStorage` 121; `BrowserWindow` 78; `ContextBridge expose` 52; `ModelContextProtocol` 43; `WebSocket` 42; `webPreferences` 37; `child_process` 36; `preload` 36; `spawn` 30; `Worker` 23; `contextIsolation` 21; `nodeIntegration` 17; `worker_threads` 11; `setPermissionRequestHandler` 5; `webSecurity` 0. A ausência de string `webSecurity` não comprova a configuração efetiva.
+
+**Concentrações observadas:** `mainView.js` contém 1519 referências `ipcRenderer`, 1151 invocações IPC diretas e 175 assinaturas `ipcRenderer.on`. `index.chunk-CHpJbW9_.js` concentra 817 referências `WebContents`, 813 `http`, 600 `MCP`, 179 `permission`, 103 `safeStorage`, 98 `sandbox`. `index.chunk-CnuqahbP.js` contém 1280 `session`; `index.chunk-DmIbHAP6.js` contém 988 `session`.
+
+**IPC — detalhe da classificação:** em `mainView.js`, 1151 chamadas: 6 literais, 1142 identificadores simples, 3 acessos a propriedade; isso refina a rodada 31, que agrupava propriedades como identificadores. Não presumir nomes de canais nem contratos internos.
+
+**Interpretação:** auditoria estática de padrões; não mede execução real, chamadas únicas, funcionamento de recursos, qualidade de modelos nem arquitetura dos servidores. Bibliotecas incorporadas, minificação e duplicação podem inflar contagens. Não reproduzir código proprietário.
+
+**Prioridades originais para REZ A.I:** (1) streaming e métricas de latência no FastAPI e frontend; (2) camada de ferramentas com permissões explícitas e logs; (3) contrato IPC tipado e preload mínimo para futuro Electron; (4) MCP sob allowlist e isolamento de processos; (5) gerenciamento de sessão/memória com privacidade e testes. Avaliar qualidade com benchmarks antes de afirmar que a REZ supera concorrentes.
