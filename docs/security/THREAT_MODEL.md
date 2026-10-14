@@ -54,3 +54,12 @@ Um usuário com controle da própria máquina pode ler, modificar ou instrumenta
 ## Relação com a pesquisa
 
 O inventário do Claude Desktop está em [claude-desktop-windows-2026-10.md](../research/claude-desktop-windows-2026-10.md). O inventário **não é auditoria de segurança do Claude** e não permite afirmar que a REZ A.I seja mais segura. Uma comparação responsável requer escopo definido, implementação pronta e testes reproduzíveis.
+
+
+## Incremento de segurança: identificadores e sessões (14/10/2026)
+
+O `PermissionEngine` agora mantém registros em memória dos identificadores `(session_id, call_id)` já aprovados. Uma chamada consumida ou expirada **não pode ser aprovada novamente** com o mesmo identificador, mesmo depois da remoção do recibo. `revoke_session` encerra definitivamente aquela identidade de sessão enquanto o processo estiver ativo. A fila `ToolReviewQueue` também recusa novas solicitações de sessões encerradas.
+
+**Limitações:** os conjuntos de identificadores e sessões revogadas crescem ao longo da vida do processo e desaparecem após reinício; é necessário planejar IDs opacos e únicos, expiração com armazenamento de revogação, limites de memória e persistência ou serviço compartilhado antes de implantação real. Não existe controle de identidade/autenticação de usuários, autorização HTTP, tela de aprovação nem ferramentas com efeitos externos. A confirmação de pessoa continua responsabilidade de um controlador confiável, ainda não implementado.
+
+**Teste local pendente:** cinco novos testes para `PermissionEngine` e dois para `ToolReviewQueue`. Rodar `python -m unittest discover -s tests -v` em `backend/` e confirmar o resultado antes de marcar a alteração como validada no Windows.
