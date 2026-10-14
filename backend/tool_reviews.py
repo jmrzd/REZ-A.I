@@ -45,11 +45,14 @@ class ToolReviewQueue:
         self._ttl = review_ttl_seconds
         self._pending: dict[tuple[str, str], tuple[ToolCall, PendingToolRequest]] = {}
         self._completed: set[tuple[str, str]] = set()
+        self._closed_sessions: set[str] = set()
         self._lock = RLock()
 
     def submit(self, call: ToolCall) -> PendingToolRequest:
         """Store a validated request. Submission never grants approval."""
         with self._lock:
+            if call.session_id in self._closed_sessions:
+                raise PermissionDenied("Session has been revoked")
             key = (call.session_id, call.call_id)
             if key in self._pending or key in self._completed:
                 raise PermissionDenied("Call identifier has already been used")
@@ -97,6 +100,7 @@ class ToolReviewQueue:
 
     def revoke_session(self, session_id: str) -> None:
         with self._lock:
+            self._closed_sessions.add(session_id)
             for key in list(self._pending):
                 if key[0] == session_id:
                     self._pending.pop(key)
