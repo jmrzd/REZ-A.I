@@ -614,3 +614,25 @@ A presença de `ws` comprova que o pacote inclui uma implementação de WebSocke
 **Implicações de design originais para REZ:** projetar contrato IPC tipado e mínimo, `contextBridge` com API restrita, validação de entradas no processo principal, permissões explícitas para ações sensíveis, isolamento de workers e testes; manter backend FastAPI separado da interface.
 
 **Próxima pesquisa sugerida:** medir a distribuição dos padrões por arquivos e distinguir referências a `ipcRenderer.invoke`/`ipcMain.handle` de chamadas genéricas, apenas com estatísticas e sem publicar código extraído.
+
+
+## Vigésima nona rodada — APIs explícitas do Electron
+
+**Fonte:** PowerShell, regex somente leitura sobre arquivos JS de `.vite/build`, Claude Desktop 2.37337.1.
+
+**Principais resultados:**
+- `mainView.js`: `ipcRenderer.invoke` 1151; `ipcRenderer.on` 175; `contextBridge.exposeInMainWorld` 22; `ipcRenderer.send` 1.
+- `computerUseTeach.js`: `ipcRenderer.invoke` 21; `ipcRenderer.on` 12; `contextBridge.exposeInMainWorld` 2.
+- `buddy.js`: `ipcRenderer.invoke` 14; `ipcRenderer.on` 3; `contextBridge.exposeInMainWorld` 5.
+- `mainWindow.js` e `quickWindow.js`: `ipcRenderer.invoke` 13 cada; `ipcRenderer.on` 4 cada; `contextBridge.exposeInMainWorld` 5 e 4, respectivamente.
+- `computerUseWatchRecord.js` e `watchRecordChooser.js`: `ipcRenderer.invoke` 12 cada; `ipcRenderer.on` 10 cada; `contextBridge.exposeInMainWorld` 1 cada.
+- `index.pre.js`: `ipcMain.on` 6.
+- `index.chunk-CHpJbW9_.js`: `ipcMain.handle` 2.
+- `localExecConsent.js`: `ipcRenderer.invoke` 1; `contextBridge.exposeInMainWorld` 1.
+- `claudePagePreview.js`: `ipcRenderer.send` 3; `ipcRenderer.on` 2; `contextBridge.exposeInMainWorld` 1.
+
+**Interpretação:** padrões explícitos de Electron identificados, mas contagens não equivalem a canais únicos, operações reais nem prova da finalidade de cada arquivo. Código minificado e bibliotecas incorporadas podem distorcer totais.
+
+**Aplicação original na REZ:** especificar API de `contextBridge` pequena, operações IPC tipadas, validação e autorização no processo principal; separar permissões para execução local, arquivos e uso do computador.
+
+**Próxima etapa:** estimar quantidade de canais literais por arquivo sem imprimir nomes ou código proprietário; distinguir nomes estáticos de canais dinâmicos.
