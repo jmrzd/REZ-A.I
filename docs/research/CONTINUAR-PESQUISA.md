@@ -30,3 +30,21 @@ Pasta `%USERPROFILE%\Desktop\Claude-Research`:
 4. Consolidar proposta de arquitetura REZ Desktop, depois seguir com streaming do backend e frontend.
 
 **Segurança e escopo:** pesquisa estática, somente leitura, em instalação própria; não executar scripts extraídos, não coletar tokens/credenciais/conversas, não publicar código proprietário. Os commits anteriores estão no histórico do GitHub; o chat continua sendo o contexto da conversa, não foi exportado integralmente para o repositório.
+
+
+## Diretriz permanente para transformar pesquisa em produto
+
+Objetivo declarado do projeto: construir a **REZ A.I** com qualidade competitiva, usando investigação autorizada do Claude Desktop apenas como referência de arquitetura e experiência, **sem copiar código proprietário**.
+
+Fluxo de trabalho:
+1. Coletar observações técnicas por análise estática somente leitura da instalação autorizada.
+2. Separar **evidência observada**, **hipótese não confirmada** e **recomendação de design**.
+3. Documentar cada descoberta relevante no relatório de pesquisa.
+4. Traduzir conceitos gerais para requisitos e implementações **originais** no frontend Next.js, backend FastAPI e futuro desktop.
+5. Validar por testes e métricas (qualidade de respostas, latência, segurança, estabilidade, usabilidade); não afirmar superioridade sem comparação.
+6. Nunca publicar código extraído, credenciais, dados pessoais ou outros materiais confidenciais.
+7. Reportar ao usuário o **nome descritivo e SHA de cada commit** efetivamente realizado.
+
+Áreas prioritárias: arquitetura Electron, comunicação IPC e contextBridge, isolamento de processos, integração MCP, workers, streaming, ferramentas com permissões, memória, UX e suporte Windows/Linux.
+
+**Ponto de retomada atual:** Etapa 28 — script PowerShell fornecido para mapear referências a IPC, contextBridge, webContents, MessagePort, spawn e worker_threads nos arquivos extraídos do Claude Desktop 2.37337.1. **Aguardando saída do usuário**; ainda não há resultados da Etapa 28.
