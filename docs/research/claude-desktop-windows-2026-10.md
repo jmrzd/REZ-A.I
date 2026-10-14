@@ -436,3 +436,19 @@ A presença de `ws` comprova que o pacote inclui uma implementação de WebSocke
 **Interpretação e limites:** `runFullTrust` e `Windows.FullTrustApplication` mostram que o pacote pode hospedar processos desktop fora do modelo restrito UWP. Não provam execução elevada como administrador, acesso irrestrito a todos os recursos, invocação efetiva dos auxiliares SSH nem ausência de outras proteções. `localSystemServices`, `packagedServices` e `unvirtualizedResources` foram observadas como declarações; seu uso efetivo não foi verificado.
 
 **Relevância para REZ Desktop:** separar interface, provedores de IA e execução de ferramentas; exigir consentimento para operações com efeitos externos, impor privilégios mínimos e evitar presumir que o empacotamento Windows, por si só, isola processos full-trust.
+
+
+## Décima sexta rodada — análise dos relatórios extraídos (versão 2.37337.1)
+
+**Fonte:** três relatórios fornecidos pelo usuário: `inventario.csv`, `mapa-arquitetura.csv` e `package.json`, gerados após extração local do `app.asar`. Não incluir os artefatos proprietários no repositório.
+
+- Inventário: **496 arquivos**, incluindo **421 `.js` e 4 `.mjs`**, 16 CSS, 6 JSON, 6 HTML e 3 arquivos `.jsc`. A lista de código também inclui outros formatos; esses números descrevem o inventário, não o código-fonte original.
+- Mapa: **187 pares arquivo/padrão**, correspondendo a presença de strings em arquivos (não número de chamadas).
+- Frequências: `sandbox` 40; `WebContents` 27; `child_process` 25; `spawn(` 15; `ipcRenderer` 14; `contextBridge` 14; `contextIsolation` 14; `BrowserWindow` 13; `worker_threads` 10; `ModelContextProtocol` 7; `node-pty` 5; `ipcMain` 2; `mcp-runtime` 1.
+- `ipcMain` aparece em `.vite/build/index.pre.js` e `.vite/build/index.chunk-CHpJbW9_.js`; `mcp-runtime` aparece no segundo. `contextIsolation` aparece, entre outros, em `.vite/build/mainWindow.js`, `quickWindow.js` e arquivos renderer; verificar valores reais antes de concluir se está habilitado.
+- Maiores arquivos observados: `resources/github-mcp/github-mcp-server.exe` (20.566.352 bytes), `resources/office365-mcp/office365-mcp-stdio.mjs` (7.288.531), `.vite/build/index.chunk-CHpJbW9_.js` (6.997.967), `.vite/build/index.chunk-CnuqahbP.js` (2.045.280), `.vite/build/index.pre.js` (918.204).
+- `package.json`: `@ant/desktop`, versão **2.37337.1**, entrada `.vite/build/index.pre.js`, Node >=22. Contém **8 dependências**, **119 dependências de desenvolvimento** e dependência opcional `node-pty`. Inclui bibliotecas declaradas de Electron, React, Vite, MCP, SSH, testes e observabilidade. Dependências declaradas não demonstram execução em runtime.
+
+**Limites:** o inventário não recupera fontes TypeScript originais; o mapa de strings não prova fluxos de controle, valores de segurança ou comportamento efetivo. A pesquisa deve continuar por trechos pequenos, revisados para evitar credenciais e código proprietário, sem subir fontes extraídas ao GitHub.
+
+**Próxima investigação sugerida:** verificar os parâmetros de `webPreferences` nos módulos `mainWindow.js` e `quickWindow.js` e a interface IPC exposta por preloads, com resultados resumidos e sem reproduzir código.
