@@ -749,3 +749,8 @@ Análise estática das linhas 13640–13822 do chunk formatado `index.chunk-DmIb
 ### Ciclo de vida dos registros de aprovação MCP (14/10/2026)
 
 Análise estática das linhas 13266–13344 de `index.chunk-DmIbHAP6.js`: um registro ativo possui expiração inicial de 120 segundos; a consulta `spend` altera seu estado de ativo para consumido e não aceita novamente o mesmo registro. Existem operações para renovar validade de registros ativos, marcar negações, descartar registros por prefixo de sessão e remover entradas expiradas. Registros já finalizados são limitados a 256 por conjunto no processo de limpeza. Esta evidência confirma consumo único do registro, mas não significa que toda ferramenta exige aprovação manual, pois outros caminhos de autorização foram identificados. Registro descritivo sem reprodução de código proprietário.
+
+
+### Aplicação da autorização na ponte MCP interna (14/10/2026)
+
+Análise estática das linhas 13490–13597 de `index.chunk-DmIbHAP6.js`: um adaptador de transporte intercepta solicitações `tools/call` e encaminha a mensagem somente após decisão positiva e ausência de cancelamento. Argumentos atualizados por uma decisão autorizada podem substituir os argumentos originais; decisões negativas produzem resposta de recusa. O wrapper `tC` cria um Proxy para instâncias de servidor MCP e intercepta `connect` para instalar o adaptador. Esta é evidência de aplicação de controle no caminho de transporte para servidores MCP internos, não prova de cobertura universal para todos os tipos de ferramentas ou servidores. Descrição arquitetural sem cópia de código proprietário.
