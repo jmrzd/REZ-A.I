@@ -35,3 +35,10 @@ Não implantar em ambiente público enquanto `/chat`, dados pessoais, operaçõe
 ## Verificação
 
 O usuário confirmou 79 testes anteriores. `backend/tests/test_local_auth.py` ainda requer confirmação local de execução (total anterior esperado 91); `backend/tests/test_deployment_config.py` acrescenta 13 casos. Total esperado após atualizar: **104 testes**, sujeito à execução real.
+
+
+## Início da persistência PostgreSQL (14/10/2026)
+
+Migração inicial adicionada em `backend/db/migrations/001_initial.sql` com usuários, conversas, mensagens e sessões. Há relações por proprietário e RLS ativado sem políticas (acesso negado por padrão). `backend/db_queries.py` contém instruções SQL parametrizadas e restritas ao proprietário; **ainda não conectadas a um banco nem usadas por HTTP**. Consulte `backend/db/README.md` para execução segura e pendências.
+
+Validação mais recente confirmada pelo usuário: **104 testes OK**. Foram adicionados **12 testes estáticos** para o banco, total esperado **116** após rodar novamente os testes. Não houve teste com PostgreSQL real. O plano ainda depende de driver, migração versionada, papéis/RLS, operações CRUD, autenticação real e integração multiusuário antes de qualquer publicação.
