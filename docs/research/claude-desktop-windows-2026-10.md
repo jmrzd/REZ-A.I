@@ -478,3 +478,14 @@ A presença de `ws` comprova que o pacote inclui uma implementação de WebSocke
 - **Ambos os arquivos:** nenhum valor literal `true`/`false` encontrado para `sandbox` ou `contextIsolation`.
 - **Interpretação:** resultado inconclusivo. A configuração pode usar variável, propriedade entre aspas, sintaxe diferente, importação, atribuição posterior ou padrão do Electron. Não inferir que proteção esteja ativa ou inativa.
 - **Próximo passo:** coletar somente indicadores estruturais em torno dos nomes de propriedade (por exemplo, caractere após os dois-pontos), sem publicar código extraído.
+
+
+## Décima nona rodada — classificação das referências de isolamento
+
+**Fonte:** PowerShell, arquivos `.vite/build/mainWindow.js` e `.vite/build/quickWindow.js`, versão 2.37337.1.
+
+- Cada arquivo possui **2 ocorrências** da palavra `sandbox` e **1 ocorrência** de `contextIsolation`.
+- Todas as ocorrências foram classificadas pelo script como **"Outra referencia"**, isto é, o texto imediatamente após o identificador não correspondeu ao padrão `^\s*:` nem `^\s*=`.
+- Isso não estabelece se a ocorrência é string, propriedade entre aspas, acesso a objeto, comentário ou outro caso. O estado efetivo das proteções permanece **indeterminado**.
+
+**Próximo passo:** coletar apenas contexto local curto para classificar a expressão, revisando a saída antes de compartilhar qualquer conteúdo potencialmente sensível.
