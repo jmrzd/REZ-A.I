@@ -133,3 +133,15 @@ O laboratório em `frontend/app/ToolApprovalDemo.tsx` foi convertido em modal (`
 Próxima etapa antes de conectar o frontend: autenticação de identidade verificável, sessão protegida e CSRF/origin checks, controlador vinculado à sessão que seja a única autoridade sobre decisões, limites de recursos e integração testada ponta a ponta. Não expor `issue()` ou `review(... approved=True)` diretamente ao usuário ou ao modelo.
 
 **Validação pendente:** o usuário confirmou a suíte anterior de 49 testes; os nove testes de sessões e o build atualizado do frontend devem ser rodados no Windows após `git pull`.
+
+
+## Ponte isolada de sessões e aprovação — incremento (14/10/2026)
+
+- `backend/tool_session_controller.py`: `ToolSessionController` resolve um token existente no `SessionStore`, identifica a sessão e cria exclusivamente solicitações `rez__demo__echo` com identificadores aleatórios. Consulta as solicitações daquela sessão, transmite uma decisão de um **controlador confiável** à fila `ToolReviewQueue`, e revoga sessão + fila ao encerrar.
+- `backend/tests/test_tool_session_controller.py`: 11 testes adicionais verificam token ausente, listagem, aprovação/negação, isolamento entre usuários e sessões do mesmo usuário, expiração, revogação e replay.
+
+**Importante:** `request_demo` e `decide` são métodos Python internos e **não foram adicionados a `backend/main.py`**. O argumento `approved=True` **não comprova consentimento** por si só; a aplicação confiável deve autenticar e coletar uma decisão humana verificável antes de invocá-lo. O `SessionStore.issue` continua reservado ao integrador autenticado: a emissão não realiza login. O único handler executável por esta ponte é `rez__demo__echo`, que não acessa recursos externos.
+
+Antes de construir rotas HTTP: estabelecer login verificado, política de cookies HttpOnly/SameSite, CSRF e validação de Origin, acesso por identidade, limites/rate limit, logs e estratégia de revogação distribuída. Não conectar diretamente o botão do laboratório à função `decide`.
+
+**Verificação ainda pendente:** os 58 testes anteriores foram confirmados no Windows; os 11 novos devem ser executados com `python -m unittest discover -s tests -v`, total esperado de 69.
