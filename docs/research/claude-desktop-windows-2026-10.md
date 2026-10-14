@@ -690,3 +690,19 @@ As categorias `Funcao`, `Objeto` e `Outro` tiveram zero ocorrências nos arquivo
 **Interpretação:** auditoria estática de padrões; não mede execução real, chamadas únicas, funcionamento de recursos, qualidade de modelos nem arquitetura dos servidores. Bibliotecas incorporadas, minificação e duplicação podem inflar contagens. Não reproduzir código proprietário.
 
 **Prioridades originais para REZ A.I:** (1) streaming e métricas de latência no FastAPI e frontend; (2) camada de ferramentas com permissões explícitas e logs; (3) contrato IPC tipado e preload mínimo para futuro Electron; (4) MCP sob allowlist e isolamento de processos; (5) gerenciamento de sessão/memória com privacidade e testes. Avaliar qualidade com benchmarks antes de afirmar que a REZ supera concorrentes.
+
+
+## Auditoria profunda concluída — 13/10/2026
+
+**Material recebido:** `RELATORIO-PROFUNDO.md` e os dez CSVs numerados de 00 a 09. Análise feita exclusivamente sobre metadados/contagens, sem publicar código distribuído do Claude.
+
+- **Cobertura:** 425 arquivos JavaScript, total de 39.571.404 bytes (~39,6 MB), distribuídos em 24 diretórios; 0 avisos de leitura.
+- **Source maps:** 0 arquivos `.map` separados; 371 arquivos JS com referências a `sourceMappingURL`, total de 376 referências. Classificação das referências: 370 `arquivo-relativo`, 3 `referencia-invalida-ou-nao-arquivo`, 2 `externa-ou-outra`, 1 `embutida-base64-ou-texto`. O CSV sinaliza 1 referência como `DisponivelLocalmente=True`; exige verificação específica, sem presumir que seja mapa original completo.
+- **Padrões textuais:** `session` 5452; `require call` 2902; `ipcRenderer.invoke` 1263; `MCP` 1226; `webContents` 991; `process.env` 875; `sandbox` 554; `permission` 462; `WebSocket` 429; `fetch` 288; `consent` 160; `safeStorage` 121; `spawn` 82; `contextBridge.expose` 52; `worker_threads` 28.
+- **IPC:** 1263 chamadas classificadas em 12 arquivos: 1252 argumentos como variável/identificador, 8 literais e 3 propriedades. `mainView.js` concentra 1151 chamadas; `computerUseTeach.js` 21; `buddy.js` 14; `aboutWindow.js`, `mainWindow.js` e `quickWindow.js` 13 cada.
+- **Configurações Electron:** 9 grupos de indícios de `sandbox` distribuídos entre `index.chunk-C4qJSrNf.js` (5), `index.chunk-CHpJbW9_.js` (2), `index.chunk-SQd0JTX3.js` (1) e `index.chunk-YBFVQBQ_.js` (1). Nenhum valor booleano explícito detectado nesses grupos; não inferir configurações efetivas.
+- **Diretórios com nomes informativos:** `.vite/build/mcp-runtime`, `pty-host`, `file-index-worker`, `transcript-search-worker`, `heavy-work-worker`, `msal-broker-worker` e `resources/office365-mcp`. Os nomes sugerem responsabilidades, mas não provam comportamento em execução.
+- **Arquivos grandes:** `resources/office365-mcp/office365-mcp-stdio.mjs` ~7,29 MB; `.vite/build/index.chunk-CHpJbW9_.js` ~7,00 MB. Tamanho e frequência de termos não equivalem a relevância funcional.
+- **Limitações:** resultados são busca textual heurística sobre bundles minificados e dependências; não recuperam fontes originais, serviços remotos, configurações de runtime ou segurança efetiva.
+
+**Aplicação para REZ A.I:** priorizar arquitetura original com contrato IPC tipado, validação de payloads e allowlist, autorização explícita por ferramenta, separação de workers, observabilidade, MCP opcional e armazenamento seguro. Implementar e testar no próprio repositório sem copiar código proprietário.
