@@ -69,6 +69,9 @@ class PermissionEngine:
         self._denied = denied_tools
         self._clock = clock
         self._receipts: dict[tuple[str, str], _Receipt] = {}
+        # Tombstones forbid reapproving old IDs after consumption or expiry.
+        self._used_ids: set[tuple[str, str]] = set()
+        self._closed_sessions: set[str] = set()
         self._lock = RLock()
 
     @staticmethod
@@ -90,8 +93,11 @@ class PermissionEngine:
             if self._blocked(call.tool_name):
                 raise PermissionDenied("Tool is disallowed")
             key = (call.session_id, call.call_id)
-            if key in self._receipts:
-                raise PermissionDenied("Call ID already has an approval record")
+            if call.session_id in self._closed_sessions:
+                raise PermissionDenied("Session has been revoked")
+            if key in self._used_ids:
+                raise PermissionDenied("Call ID has already been used")
+            self._used_ids.add(key)
             self._receipts[key] = _Receipt(
                 self._fingerprint(call), self._clock() + self._ttl,
             )
@@ -99,8 +105,8 @@ class PermissionEngine:
     def consume(self, call: ToolCall) -> None:
         """Consume the receipt atomically, or refuse the invocation."""
         with self._lock:
-            if self._blocked(call.tool_name):
-                raise PermissionDenied("Tool is disallowed")
+            if self._blocked(call.tool_name) or call.session_id in self._closed_sessions:
+                raise PermissionDenied("Tool or session is disallowed")
             key = (call.session_id, call.call_id)
             receipt = self._receipts.get(key)
             if receipt is None:
@@ -115,6 +121,7 @@ class PermissionEngine:
     def revoke_session(self, session_id: str) -> None:
         """Discard pending approvals when a session terminates."""
         with self._lock:
+            self._closed_sessions.add(session_id)
             for key in list(self._receipts):
                 if key[0] == session_id:
                     del self._receipts[key]
