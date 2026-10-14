@@ -539,3 +539,14 @@ A presença de `ws` comprova que o pacote inclui uma implementação de WebSocke
 **Limite crítico:** a presença de opções no mesmo arquivo não prova que estejam dentro do mesmo objeto `webPreferences`. Não há confirmação de valores nem da configuração efetiva das janelas.
 
 **Próxima etapa:** extrair apenas pares nome/valor booleano próximos das ocorrências de `webPreferences:` para orientar análise, sem compartilhar código-fonte extraído.
+
+
+## Rodadas 23–25 — análise de objetos webPreferences
+
+**Fonte:** PowerShell, `index.chunk-CHpJbW9_.js`, Claude Desktop 2.37337.1.
+
+- **Rodada 23:** nas 27 janelas textuais de 500 caracteres após `webPreferences:`, não foram identificados pares literais `sandbox/contextIsolation/nodeIntegration/webSecurity: true|false`. Busca textual, não análise sintática.
+- **Rodada 24:** 18 das 27 ocorrências têm `{` como primeiro caractere não branco depois de `webPreferences:` (candidatos a objetos diretos); 9 começam com identificador/expressão. A classificação é heurística.
+- **Rodada 25:** em janelas de 400 caracteres após os candidatos a objetos diretos, ocorreram referências `sandbox`, `contextIsolation`, `nodeIntegration` e `preload` sem valores booleanos literais detectados. Não houve referência a `webSecurity` nem `partition` nas janelas examinadas. A saída recebida para o objeto 2 foi parcial; evitar atribuir contagens exatas por opção.
+- **Limitação:** as janelas textuais não respeitam os limites de objetos JavaScript. Uma referência detectada pode estar em objeto aninhado ou fora de `webPreferences`. Não inferir valores efetivos de segurança.
+- **Próximo passo:** análise sintática local mais robusta ou busca por contextos estruturais reduzidos; não publicar código proprietário extraído.
