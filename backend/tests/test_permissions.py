@@ -75,5 +75,38 @@ class PermissionEngineTests(unittest.TestCase):
             ToolCall("", "call", "tool", {})
 
 
+    def test_consumed_call_id_cannot_be_approved_again(self):
+        self.engine.approve(self.call, human_confirmed=True)
+        self.engine.consume(self.call)
+        with self.assertRaises(PermissionDenied):
+            self.engine.approve(self.call, human_confirmed=True)
+
+    def test_expired_call_id_cannot_be_approved_again(self):
+        self.engine.approve(self.call, human_confirmed=True)
+        self.now = 221.0
+        with self.assertRaises(PermissionDenied):
+            self.engine.consume(self.call)
+        with self.assertRaises(PermissionDenied):
+            self.engine.approve(self.call, human_confirmed=True)
+
+    def test_revoked_session_rejects_fresh_approvals(self):
+        self.engine.revoke_session("session-1")
+        with self.assertRaises(PermissionDenied):
+            self.engine.approve(self.call, human_confirmed=True)
+
+    def test_revoked_session_does_not_affect_other_sessions(self):
+        self.engine.revoke_session("session-1")
+        other = ToolCall("session-2", "call-1", "mcp__files__read", {"path": "notes.txt"})
+        self.engine.approve(other, human_confirmed=True)
+        self.engine.consume(other)
+
+    def test_new_call_id_can_be_approved_after_prior_consumption(self):
+        self.engine.approve(self.call, human_confirmed=True)
+        self.engine.consume(self.call)
+        next_call = ToolCall("session-1", "call-2", "mcp__files__read", {"path": "notes.txt"})
+        self.engine.approve(next_call, human_confirmed=True)
+        self.engine.consume(next_call)
+
+
 if __name__ == "__main__":
     unittest.main()
