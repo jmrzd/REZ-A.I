@@ -15,7 +15,7 @@ export default function Home() {
   const [active, setActive] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
   const [draft, setDraft] = useState('');
-  const [modelId, setModelId] = useState('qwen-fast');
+  const [modelId, setModelId] = useState('turbo');
   const [hasGpu, setHasGpu] = useState<boolean | null>(null);
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<Progress | null>(null);
@@ -42,7 +42,6 @@ export default function Home() {
     } catch { /* Corrupted local cache must not break the application. */ }
     const gpu = hasWebGPU();
     setHasGpu(gpu);
-    if (!gpu) setModelId('smol-cpu');
     setReady(true);
   }, []);
   useEffect(() => {
@@ -54,6 +53,7 @@ export default function Home() {
 
   const current = chats.find(c => c.id === active);
   const messages = current?.messages ?? [];
+  const turbo = modelId === 'turbo';
   const selectedModel = LOCAL_MODELS.find(m => m.id === modelId) ?? LOCAL_MODELS[0];
 
   function newChat() {
@@ -88,23 +88,57 @@ export default function Home() {
       ? prev.map(c => c.id === id ? { ...c, messages: next } : c)
       : [{ id, title: content.slice(0, 50), messages: next }, ...prev]);
     setDraft(''); setBusy(true); setError(''); setCopied(null);
-    setProgress({ text: 'Preparando a IA local...' });
+    setProgress({ text: turbo ? 'Conectando à REZ Turbo na nuvem...' : 'Preparando a IA local...' });
 
     let reply = '';
     const showReply = () => setChats(prev => prev.map(c => c.id === id
       ? { ...c, messages: reply ? [...next, { role: 'assistant', content: reply }] : next }
       : c));
     try {
-      await generateLocal({
-        modelId, messages: next,
-        signal: controller.signal,
-        onProgress: setProgress,
-        onDelta: part => {
-          reply += part;
-          showReply();
-        },
-      });
-      if (!reply.trim()) throw Error('O modelo não gerou uma resposta. Tente novamente.');
+      if (turbo) {
+        // Lightweight network streaming: no model weights downloaded to the device.
+        const res = await fetch('/api/chat/turbo', {
+          method: 'POST',
+          signal: controller.signal,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            messages: next.slice(-12).map(m => ({
+              role: m.role,
+              content: m.content.slice(0, 3000),
+            })),
+          }),
+        });
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          const message = typeof body.error === 'string'
+            ? body.error : 'A nuvem gratuita está indisponível no momento.';
+          throw Error(message);
+        }
+        if (!res.body) throw Error('Streaming não disponível neste navegador.');
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let firstText = true;
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          const text = decoder.decode(value, { stream: true });
+          if (text) {
+            if (firstText) { setProgress(null); firstText = false; }
+            reply += text;
+            showReply();
+          }
+        }
+        const remainder = decoder.decode();
+        if (remainder) { reply += remainder; showReply(); }
+      } else {
+        await generateLocal({
+          modelId, messages: next,
+          signal: controller.signal,
+          onProgress: setProgress,
+          onDelta: part => { reply += part; showReply(); },
+        });
+      }
+      if (!reply.trim()) throw Error('Nenhuma resposta recebida. Verifique a nuvem gratuita ou selecione um modelo local.');
     } catch (err) {
       if (controller.signal.aborted) setError('Geração interrompida.');
       else setError(err instanceof Error ? err.message : 'Falha ao iniciar IA local.');
@@ -139,41 +173,44 @@ export default function Home() {
         </nav>
         <div className="sidefoot">
           <span className="statusDot" /> REZ A.I <span>• Open Source</span>
-          <p>Sem chave de API e sem cobranças por mensagem.</p>
-          <p>As mensagens ficam neste navegador.</p>
+          <p>Turbo: modelo hospedado com preço zero anunciado, sujeito a limites.</p>
+          <p>Histórico salvo no navegador; mensagens Turbo são enviadas à NVIDIA.</p>
         </div>
       </aside>
       <section className="main">
         <header>
           <div className="headerLeft">
             <button className="menu" onClick={() => setMenu(!menu)} aria-label="Alternar menu"><PanelLeft size={21} /></button>
-            <div className="heading">Rez A.I <span>Seu espaço de inteligência local</span></div>
+            <div className="heading">Rez A.I <span>{turbo ? "Seu espaço de inteligência na nuvem" : "Seu espaço de inteligência local"}</span></div>
           </div>
           <div className="headerControls">
-            <span className="localBadge"><Zap size={13} /> IA sem API paga</span>
+            <span className="localBadge"><Zap size={13} /> {turbo ? "Turbo · sem downloads" : "Modo local"}</span>
             <button type="button" className="permissionsToggle" onClick={() => setShowPermissions(v => !v)} aria-expanded={showPermissions}>
               <ShieldCheck size={16} /> <span>Permissões</span>
             </button>
-            <select aria-label="Modelo de IA local" value={modelId} disabled={busy}
+            <select aria-label="Modelo de IA" value={modelId} disabled={busy}
               onChange={e => { setModelId(e.target.value); setError(''); setProgress(null); }}>
+              <option value="turbo">REZ Turbo · Nemotron 30B (Nuvem)</option>
               {LOCAL_MODELS.map(m => <option key={m.id} value={m.id}>{m.label}</option>)}
             </select>
           </div>
         </header>
         {showPermissions && <ToolApprovalDemo onClose={() => setShowPermissions(false)} />}
         <div className="modelNotice" role="status">
-          <Cpu size={16} />
-          <span><strong>{selectedModel.label}</strong> · {selectedModel.memory}. {selectedModel.description}
-            {hasGpu === false && selectedModel.engine === 'webgpu' && ' WebGPU indisponível: escolha o modelo CPU.'}
-          </span>
+          {turbo ? <Zap size={16} /> : <Cpu size={16} />}
+          {turbo
+            ? <span><strong>REZ Turbo · NVIDIA Nemotron 3.5 Lightning</strong> — modelo aberto de 30B executado na nuvem, sem baixar pesos ou exigir GPU. Oferta atualmente gratuita e sujeita a limites. Ao enviar, suas mensagens vão ao provedor NVIDIA, que pode retê-las para melhorias. Evite dados confidenciais.</span>
+            : <span><strong>{selectedModel.label}</strong> · {selectedModel.memory}. {selectedModel.description}
+              {hasGpu === false && selectedModel.engine === 'webgpu' && ' WebGPU indisponível: escolha o modelo CPU.'}
+            </span>}
         </div>
         <div className="conversation">
           {messages.length === 0
             ? <div className="welcome">
               <div className="orb"><BrainCircuit size={36} /></div>
-              <div className="eyebrow"><Sparkles size={13} /> INTELIGÊNCIA LIVRE · NO SEU DISPOSITIVO</div>
+              <div className="eyebrow"><Sparkles size={13} /> {turbo ? "INTELIGÊNCIA RÁPIDA · SEM DOWNLOADS" : "INTELIGÊNCIA LIVRE · NO SEU DISPOSITIVO"}</div>
               <h1>O que vamos criar <em>hoje?</em></h1>
-              <p>Converse com modelos abertos sem API paga. Na primeira utilização, o navegador baixa o modelo escolhido. O processamento acontece no seu dispositivo.</p>
+              <p>{turbo ? "Converse com um modelo aberto de 30 bilhões de parâmetros na nuvem. Sem downloads pesados ou GPU no seu PC. O serviço é oferecido gratuitamente no momento, sujeito a limites." : "Converse com modelos abertos no seu dispositivo. Na primeira utilização, o navegador precisa baixar os pesos do modelo escolhido."}</p>
               <div className="chips">
                 <button onClick={() => setDraft('Me ajude a criar um projeto em Python')}>Criar com Python ↗</button>
                 <button onClick={() => setDraft('Explique como funciona uma inteligência artificial')}>Explorar IA ↗</button>
@@ -202,7 +239,7 @@ export default function Home() {
         </div>}
         {error && <div className="error" role="alert">{error}</div>}
         <form onSubmit={send} className="composer">
-          <textarea aria-label="Sua mensagem" placeholder="Pergunte à REZ A.I local..." value={draft}
+          <textarea aria-label="Sua mensagem" placeholder={turbo ? "Pergunte à REZ Turbo..." : "Pergunte à REZ A.I local..."} value={draft}
             onChange={e => setDraft(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); e.currentTarget.form?.requestSubmit(); } }}
             rows={2} />
@@ -210,7 +247,7 @@ export default function Home() {
             ? <button className="stopButton" type="button" onClick={() => abortRef.current?.abort()} aria-label="Parar geração"><StopCircle size={20} /></button>
             : <button disabled={!draft.trim()} aria-label="Enviar mensagem"><Send size={19} /></button>}
         </form>
-        <footer>Pesos baixados de fontes abertas. Sem cobrança por token. Modelos pequenos podem cometer erros.</footer>
+        <footer>{turbo ? "Modelo hospedado pela NVIDIA via Vercel. A promoção gratuita pode mudar; não envie dados confidenciais." : "Pesos baixados de fontes abertas. Sem cobrança por token. Modelos pequenos podem cometer erros."}</footer>
       </section>
     </main>
   );
