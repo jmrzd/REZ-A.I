@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
   INITIAL_SOURCES, validPublicUrl, parseSourceCatalog, findSources,
-  sourcesAsPromptContext,
+  sourcesAsPromptContext, getBundledCatalog,
 } from '../app/knowledge-web';
 import { buildCloudMessages } from '../app/cloud-ai';
 import { GET } from '../app/api/knowledge/search/route';
@@ -102,4 +102,45 @@ test('research is opt-in for chat; documents are also opt-in', () => {
   assert.match(page, /sourcesAsPromptContext\(citations\)/);
   assert.match(panel, /Importar catálogo JSON/);
   assert.match(panel, /Desativado por padrão/);
+});
+
+
+test('full user-provided knowledge pack is now included directly in the app', () => {
+  const source = JSON.parse(readFileSync(join(process.cwd(), '..', 'knowledge', 'data', 'rez-knowledge-full.json'), 'utf8'));
+  const published = JSON.parse(readFileSync(join(process.cwd(), 'public', 'rez-knowledge-catalog.json'), 'utf8'));
+  assert.equal(source.fontes.length, 440);
+  assert.equal(source.feeds.length, 23);
+  assert.equal(source.perguntas_teste.length, 360);
+  assert.equal(published.fontes.length, 440);
+  assert.equal(published.feeds.length, 23);
+  assert.ok(published.fontes.every((s: { url: string }) => validPublicUrl(s.url)));
+  const fullUrls = new Set(source.fontes.map((x: {url:string}) => x.url));
+  assert.ok(published.fontes.every((s: {url:string}) => fullUrls.has(s.url)));
+  assert.ok(source.perguntas_teste.every((q: Record<string,unknown>) =>
+    typeof q.pergunta === 'string' && !('resposta' in q) && !('answer' in q)));
+});
+
+test('website loads full bundled catalog and feeds without manual JSON upload', async () => {
+  const original = globalThis.fetch;
+  const bundled = JSON.parse(readFileSync(join(process.cwd(), 'public', 'rez-knowledge-catalog.json'), 'utf8'));
+  globalThis.fetch = (async (url: RequestInfo | URL) => {
+    assert.equal(String(url), '/rez-knowledge-catalog.json');
+    return Response.json(bundled);
+  }) as typeof fetch;
+  try {
+    const { sources, feeds } = await getBundledCatalog();
+    assert.equal(sources.length, 440);
+    assert.equal(feeds.length, 23);
+    assert.equal(new Set(sources.map(x => x.categoria)).size, 33);
+  } finally { globalThis.fetch = original; }
+});
+
+test('training pipeline uses source metadata and unanswered prompts, not LLM answer labels', () => {
+  const setup = readFileSync(join(process.cwd(), '..', 'training', 'prepare_hf_datasets.py'), 'utf8');
+  const trainer = readFileSync(join(process.cwd(), '..', 'training', 'train_intent_router.py'), 'utf8');
+  assert.match(setup, /from datasets import Dataset, DatasetDict/);
+  assert.match(setup, /question.only_count|question_only_count/);
+  assert.match(setup, /labelled_question_answer_pairs/);
+  assert.match(trainer, /LogisticRegression/);
+  assert.match(trainer, /NOT the LLM/);
 });
