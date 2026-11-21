@@ -112,3 +112,11 @@
 .rezAutoLabel>span{font-size:10px;color:#b4a1ce;font-weight:400}
 .quickReplyNote{font-size:10px;letter-spacing:.01em;color:#a594b6;padding-left:5px;margin-bottom:5px}
 @media(max-width:760px){.rezAutoLabel{padding:8px;font-size:11px}.rezAutoLabel>span{display:none}}
+
+
+/* Optional, explicit warm-up of the on-device AI */
+.warmButton{border-color:#665188!important;background:#281b3a!important;color:#e8d5ff!important;white-space:nowrap}
+.warmButton:not(:disabled):hover{background:#392652!important}
+.warmButton:disabled{opacity:.75;cursor:default}
+.warmButton svg{color:#bb94f8}
+@media(max-width:790px){.warmButton span{display:none}}
