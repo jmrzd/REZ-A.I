@@ -10,10 +10,12 @@ import {
 const STORAGE_KEY = 'rez-ai-network-sources-v1';
 
 export default function NetworkKnowledgePanel({
-  onClose, onUseQuestion,
+  onClose, onUseQuestion, useSearchForChat, onSearchToggle,
 }: {
   onClose: () => void;
   onUseQuestion: (text: string) => void;
+  useSearchForChat: boolean;
+  onSearchToggle: (enabled: boolean) => void;
 }) {
   const [catalog, setCatalog] = useState<KnowledgeSource[]>([]);
   const [query, setQuery] = useState('');
@@ -75,6 +77,13 @@ export default function NetworkKnowledgePanel({
           <Search size={16} /> {loading ? 'Buscando...' : 'Pesquisar'}
         </button>
       </div>
+      <label className="networkConsent">
+        <input type="checkbox" checked={useSearchForChat}
+          onChange={e => onSearchToggle(e.target.checked)} />
+        <span>Consultar Wikipédia e Crossref antes das respostas da REZ na nuvem.
+          A pergunta será enviada aos serviços públicos. Desativado por padrão;
+          pesquisar pode adicionar alguns segundos.</span>
+      </label>
       <div className="networkImport">
         <span><strong>{indexed.length} fontes</strong> · {new Set(indexed.map(s => s.categoria)).size} áreas · {catalog.length ? 'catálogo importado' : 'catálogo inicial'}</span>
         <button type="button" onClick={() => fileRef.current?.click()}>
