@@ -130,3 +130,11 @@
 .rezModeSwitch button:disabled{opacity:.4;cursor:not-allowed}
 @media(max-width:920px){.rezModeSwitch button{padding:6px 8px;font-size:11px}}
 @media(max-width:640px){.rezModeSwitch{gap:2px}.rezModeSwitch button{font-size:10px;padding:6px}.rezAutoLabel{display:none}}
+
+
+/* Cloud task selector and opt-in document context */
+.rezTaskMode{min-width:102px;max-width:124px;border:1px solid #55416c;border-radius:9px;background:#21172d;color:#e7d7fa;padding:8px;font-size:12px}
+.cloudDocsConsent{display:flex;align-items:flex-start;gap:10px;cursor:pointer;color:#d3c4e6;font-size:12px;line-height:1.5;margin:12px 0;border:1px solid #55436c;padding:11px;border-radius:9px;background:#22182c}
+.cloudDocsConsent input{accent-color:#a67bed;margin-top:3px}
+.cloudDocsConsent span{flex:1}
+@media(max-width:700px){.rezTaskMode{min-width:75px;max-width:94px;padding:7px 4px;font-size:11px}}
