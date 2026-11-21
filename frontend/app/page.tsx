@@ -11,7 +11,7 @@ import { generateLocal, prepareLocal, hasWebGPU, type ChatTurn, type Progress } 
 import { instantAnswer } from './instant-replies';
 import { generateHosted, type AssistMode } from './cloud-ai';
 import NetworkKnowledgePanel from './NetworkKnowledgePanel';
-import { searchPublicKnowledge, sourcesAsPromptContext, type PublicHit } from './knowledge-web';
+import { searchPublicKnowledge, sourcesAsPromptContext, getBundledCatalog, rankCatalogSources, catalogueLeadsAsEvidence, type PublicHit } from './knowledge-web';
 import {
   buildLocalContext, readDocuments, removeDocument, saveDocument,
   type LocalDocument, MAX_DOC_BYTES, MAX_DOCS,
@@ -268,19 +268,30 @@ export default function Home() {
         setEngineStage('cloud');
         let publicEvidence = '';
         if (searchWebForAnswers) {
-          setProgress({ text: 'Buscando referências em fontes públicas antes de responder...' });
-          try {
-            const research = await searchPublicKnowledge(content,
-              AbortSignal.any([controller.signal, AbortSignal.timeout(5200)]));
-            const citations = research.results.slice(0, 5);
-            publicEvidence = sourcesAsPromptContext(citations);
-            setChats(previous => previous.map(chat => chat.id === id
-              ? { ...chat, webSources: citations } : chat));
-          } catch {
-            if (controller.signal.aborted) throw new DOMException('Cancelado', 'AbortError');
-            // A temporary outage in public sources must not invent evidence,
-            // and must not block a cloud inference already authorized.
-          }
+          setProgress({ text: 'Consultando referências públicas e a base de 440 fontes da REZ...' });
+          const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(5200)]);
+          const [research, directory] = await Promise.allSettled([
+            searchPublicKnowledge(content, signal),
+            getBundledCatalog(signal),
+          ]);
+          if (controller.signal.aborted) throw new DOMException('Cancelado', 'AbortError');
+          const citations = research.status === 'fulfilled' ? research.value.results.slice(0, 5) : [];
+          const leads = directory.status === 'fulfilled'
+            ? rankCatalogSources(directory.value.sources, content, 3) : [];
+          // Directory links are NOT evidence that any article was read.
+          // Include only clearly-labeled leads so the model can suggest where to verify.
+          const leadsContext = catalogueLeadsAsEvidence(leads);
+          publicEvidence = [leadsContext, sourcesAsPromptContext(citations)]
+            .filter(Boolean).join('\n\n').slice(0, 1800);
+          const referenced: PublicHit[] = [
+            ...citations,
+            ...leads.map(source => ({
+              title: source.nome, url: source.url, excerpt: 'Diretório: página não consultada',
+              provider: 'Diretório REZ' as const, kind: 'diretorio',
+            })),
+          ];
+          setChats(previous => previous.map(chat => chat.id === id
+            ? { ...chat, webSources: referenced } : chat));
         }
         setProgress({ text: 'Gerando resposta no cérebro da REZ na nuvem...' });
         await generateHosted(next, sendDocsToCloud ? retrieval.context : '', controller.signal, text => {
@@ -506,8 +517,8 @@ export default function Home() {
                 <div className="knowledgeSources">Documentos consultados: {current.sources.join(', ')}</div>
               ) : null}
               {current?.webSources?.length ? (
-                <section className="webCitations" aria-label="Referências públicas consultadas">
-                  <strong>Fontes públicas consultadas (títulos e trechos, não artigos completos)</strong>
+                <section className="webCitations" aria-label="Referências públicas consultadas ou sugeridas">
+                  <strong>Referências públicas: metadados consultados e links sugeridos pelo diretório REZ (páginas não lidas)</strong>
                   {current.webSources.map(source =>
                     <a key={source.url} href={source.url} rel="noopener noreferrer" target="_blank">
                       {source.title} · {source.provider}
