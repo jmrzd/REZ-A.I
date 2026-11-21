@@ -74,7 +74,7 @@ test('frontend SSE client reconstructs a text delta and recognizes completion', 
 test('frontend uses hosted mode without automatically downloading models', () => {
   const page = readFileSync(join(process.cwd(), 'app', 'page.tsx'), 'utf8');
   const proxy = readFileSync(join(process.cwd(), 'app', 'api', 'brain', 'route.ts'), 'utf8');
-  assert.match(page, /useState<'cloud' \| 'local'>\('cloud'\)/);
+  assert.match(page, /useState<'native' \| 'cloud' \| 'local'>\('native'\)/);
   assert.match(page, /await generateHosted\(next/);
   assert.match(page, /Nenhum modelo será baixado automaticamente no seu PC/);
   assert.match(proxy, /REZ_BRAIN_SHARED_SECRET/);
