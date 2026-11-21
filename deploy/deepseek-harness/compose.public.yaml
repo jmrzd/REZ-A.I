@@ -1,0 +1,40 @@
+# Optional Internet-facing HTTPS UI for a dedicated server.
+# Requires a real domain and strong Basic Auth password hash. Do not turn on
+# for untrusted users while upstream DSH remains unaudited developer preview.
+services:
+  harness:
+    command:
+      - web
+      - --host
+      - 0.0.0.0
+      - --port
+      - "3080"
+      - --no-open
+      - --public-url
+      - "https://${DSH_DOMAIN:?DSH_DOMAIN is required}/"
+      - --trusted-host
+      - "${DSH_DOMAIN:?DSH_DOMAIN is required}"
+  proxy:
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    depends_on:
+      - harness
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    environment:
+      DSH_DOMAIN: "${DSH_DOMAIN:?DSH_DOMAIN is required}"
+      DSH_BASIC_AUTH_USER: "${DSH_BASIC_AUTH_USER:?DSH_BASIC_AUTH_USER is required}"
+      DSH_BASIC_AUTH_HASH: "${DSH_BASIC_AUTH_HASH:?DSH_BASIC_AUTH_HASH is required}"
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - isolated
+
+volumes:
+  caddy_data:
+  caddy_config:

@@ -1,0 +1,9 @@
+# DSH is never exposed directly. Enforce TLS + an independent access gate.
+# Caddy supports WebSocket upgrades, original Host, and secure browser transport.
+{$DSH_DOMAIN} {
+    encode zstd gzip
+    basic_auth {
+        {$DSH_BASIC_AUTH_USER} {$DSH_BASIC_AUTH_HASH}
+    }
+    reverse_proxy harness:3080
+}

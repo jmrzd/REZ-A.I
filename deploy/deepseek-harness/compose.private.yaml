@@ -1,0 +1,6 @@
+# Private host access through an SSH tunnel, NOT an Internet-facing port.
+# Use with: docker compose -f compose.yaml -f compose.private.yaml up -d --build
+services:
+  harness:
+    ports:
+      - "127.0.0.1:3080:3080"

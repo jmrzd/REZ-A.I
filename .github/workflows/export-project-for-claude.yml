@@ -1,0 +1,112 @@
+name: Export REZ A.I source ZIP for Claude
+on:
+  push:
+    branches: ["feat/rez-server-brain-cloudflare"]
+    paths:
+      - ".github/workflows/export-project-for-claude.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Create project ZIP and architecture handoff
+        shell: bash
+        run: |
+          python - <<'PY'
+          import os
+          import subprocess
+          import zipfile
+          from pathlib import Path
+
+          name = "REZ-AI-PROJETO-COMPLETO-PARA-CLAUDE.zip"
+          raw = subprocess.check_output(["git", "ls-files", "-z"]).split(b"\0")
+          paths = [Path(os.fsdecode(f)) for f in raw if f]
+          rejected = []
+          allowed = []
+          blocked_dirs = {".git", "node_modules", ".next", "__pycache__", "dist", ".vercel", ".wrangler", ".venv"}
+          for p in paths:
+              parts = p.parts
+              if not p.is_file() or any(t in blocked_dirs for t in parts):
+                  rejected.append(p)
+                  continue
+              if any(part == ".env" or (part.startswith(".env.") and not part.endswith(".example")) for part in parts):
+                  rejected.append(p)
+                  continue
+              if any(part.endswith((".pem", ".key", ".p12", ".pfx", ".sqlite", ".db")) for part in parts):
+                  rejected.append(p)
+                  continue
+              if p.stat().st_size > 10 * 1024 * 1024:
+                  rejected.append(p)
+                  continue
+              allowed.append(p)
+
+          def tree(paths):
+              return "\n".join(str(p).replace("\\", "/") for p in paths)
+
+          structure = "# Estrutura do projeto REZ A.I\n\n"
+          structure += "Fonte: github.com/jmrzd/REZ-A.I\n"
+          structure += "Branch: feat/rez-server-brain-cloudflare\n"
+          structure += "Commit: " + subprocess.check_output(["git", "rev-parse", "HEAD"]).decode().strip() + "\n"
+          structure += "\n## Arquivos do ZIP\n\n```text\n" + tree(allowed) + "\n```\n"
+
+          guide = """# REZ A.I — Guia de transferencia para Claude
+
+          Este ZIP contem o codigo-fonte real da branch feat/rez-server-brain-cloudflare (PR #11).
+          Nunca presuma que tudo esta implantado: Cloudflare Worker ainda precisa de conta e configuracao.
+
+          ## Pastas
+          - frontend/: Next.js/React, UI e ponte segura /api/brain.
+          - cloudflare-brain/: Worker Cloudflare Workers AI binding para inferencia na nuvem.
+          - backend/: FastAPI Python e experimentos/servicos legados.
+          - os-agent/: prototipo do agente local com permissoes.
+          - docs/: arquitetura, seguranca, roadmaps e instrucoes.
+          - .github/workflows/: testes, builds e exportacao.
+
+          ## Estado real
+          - O frontend na branch foi construido numa PREVIEW protegida na Vercel.
+          - O Worker Cloudflare ainda NAO foi ativado na conta do projeto.
+          - Sem a publicacao do Worker e sem REZ_BRAIN_URL/REZ_BRAIN_SHARED_SECRET nos servidores, a nuvem nao respondera.
+          - O segredo interno de servidor nao e chave API de um provedor de IA, mas e necessario para impedir abuso da cota.
+          - A funcao cloud utiliza pesos abertos existentes, nao um modelo fundacional treinado do zero.
+          - A branch main nao foi atualizada com as alteracoes desta feature.
+
+          ## Pedido ao Claude
+          1. Leia docs/CLOUDFLARE_BRAIN_SETUP.md, README.md, frontend/app/page.tsx,
+             frontend/app/cloud-ai.ts, frontend/app/api/brain/route.ts,
+             cloudflare-brain/src/index.ts e os testes associados.
+          2. Identifique problemas reais de seguranca, SSE, UX e arquitetura e proponha correcoes.
+          3. Preserve o requisito: SEM consumo local de RAM/GPU para inferencia no modo Nuvem.
+          4. Preserve a seguranca e a privacidade dos dados; nunca exponha segredos.
+          5. Nao afirme que uma API esta funcionando sem teste de inferencia real.
+          6. Evite qualquer cobranca inadvertida; respeite cota gratuita Cloudflare.
+          7. Entregue alteracoes em codigo, testes e instrucoes para implantacao.
+
+          ## Comandos locais para validar, se desejado
+          - cd frontend && npm install && npm test && npm run build
+          - cd cloudflare-brain && npm install && npm run typecheck
+          - cd backend && pip install -r requirements.txt && python -m unittest discover -s tests -v
+
+          Nota: nenhum peso de modelo ou segredo de producao foi incluido.
+          """
+          guide = "\n".join(line[10:] if line.startswith("          ") else line for line in guide.splitlines()) + "\n"
+          with zipfile.ZipFile(name, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as z:
+              for p in allowed:
+                  z.write(p, "REZ-A.I/" + p.as_posix())
+              z.writestr("REZ-A.I/ESTRUTURA_DO_PROJETO.md", structure)
+              z.writestr("REZ-A.I/GUIA_PARA_CLAUDE.md", guide)
+          print(f"Created {name}, source files={len(allowed)}, excluded={len(rejected)}, bytes={Path(name).stat().st_size}")
+          PY
+      - name: Upload source archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: rez-ai-codigo-para-claude
+          path: REZ-AI-PROJETO-COMPLETO-PARA-CLAUDE.zip
+          if-no-files-found: error
+          retention-days: 7

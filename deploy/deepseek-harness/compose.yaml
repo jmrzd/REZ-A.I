@@ -1,0 +1,42 @@
+# Default is private: no host port and no public entrypoint.
+# Only the optional protected overlay may publish the web UI.
+name: rez-deepseek-harness
+
+services:
+  harness:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        DSH_VERSION: 0.2.2-rc.5
+    init: true
+    restart: unless-stopped
+    user: node
+    environment:
+      DSH_HOME: /data/dsh
+      HOME: /data/dsh
+      NODE_ENV: production
+    volumes:
+      - dsh_home:/data/dsh
+      - workspace:/workspace
+    expose:
+      - "3080"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    pids_limit: 256
+    mem_limit: 3g
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=256m
+    networks:
+      - isolated
+
+networks:
+  isolated:
+    driver: bridge
+
+volumes:
+  dsh_home:
+  workspace:
