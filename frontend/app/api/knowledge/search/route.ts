@@ -10,7 +10,7 @@
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-export type SourceHit = {
+type SourceHit = {
   title: string;
   url: string;
   excerpt: string;
@@ -94,7 +94,7 @@ async function crossref(q: string): Promise<SourceHit[]> {
     }];
   });
 }
-export async function searchKnowledge(question: string): Promise<{
+async function searchKnowledge(question: string): Promise<{
   results: SourceHit[];
   unavailable: string[];
 }> {
