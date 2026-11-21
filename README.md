@@ -1,3 +1,5 @@
+> **REZ TURBO v0.3 — modo padrão na nuvem sem pesos locais:** a REZ agora usa Nemotron 3.5 Lightning, 30B de parâmetros, por meio do Vercel AI Gateway. Modelo gratuito anunciado em novembro/2026, sujeito a limites e mudanças. Não é o ChatGPT. O histórico local fica no navegador, mas mensagens Turbo são enviadas à NVIDIA, que pode retê-las. **Consulte [a arquitetura e os avisos de privacidade](docs/REZ_TURBO.md).**
+
 > **ATUALIZAÇÃO ATIVA — REZ LOCAL v0.2 (sem API paga):**
 > A versão web agora gera texto no próprio navegador com **WebLLM + Qwen2.5 (WebGPU)** ou **Transformers.js + SmolLM2 (CPU/WASM)**. Não usa Moonshot/Kimi, OpenAI nem créditos por token. A primeira mensagem exige baixar pesos públicos para o dispositivo. A API Python, se usada, é apenas para Ollama local.
 >
@@ -16,7 +18,7 @@
 **Uma plataforma de IA híbrida construída para aprender com a pesquisa de ponta e evoluir com evidências.**
 
 ![Status](https://img.shields.io/badge/status-MVP%20em%20desenvolvimento-8b5cf6?style=flat-square)
-![Version](https://img.shields.io/badge/version-0.2.0%20local-27272a?style=flat-square)
+![Version](https://img.shields.io/badge/version-0.3.0%20turbo-27272a?style=flat-square)
 ![Web](https://img.shields.io/badge/interface-Full%20Black%20Premium-050507?style=flat-square)
 ![Python](https://img.shields.io/badge/backend-Python%20%2B%20FastAPI-3776AB?style=flat-square)
 ![Next.js](https://img.shields.io/badge/frontend-Next.js-111111?style=flat-square)
