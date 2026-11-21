@@ -17,7 +17,7 @@ import {
   type LocalDocument, MAX_DOC_BYTES, MAX_DOCS,
 } from './knowledge';
 
-type RezMessage = ChatTurn & { source?: 'instant' | 'model' | 'native' };
+type RezMessage = ChatTurn & { source?: 'instant' | 'model' | 'native' | 'agent' };
 type Conversation = { id: string; title: string; messages: RezMessage[]; sources?: string[]; webSources?: PublicHit[] };
 
 const HISTORY_KEY = 'rez-ai-conversations-v1';
@@ -257,7 +257,7 @@ export default function Home() {
     setCopied(null);
 
     let reply = '';
-    let replySource: 'instant' | 'model' | 'native' = 'model';
+    let replySource: 'instant' | 'model' | 'native' | 'agent' = 'model';
     let flushTimer: ReturnType<typeof setTimeout> | null = null;
     const showReply = () => setChats(previous => previous.map(chat => chat.id === id
       ? { ...chat, messages: reply ? [...next, { role: 'assistant', content: reply, source: replySource }] : next }
@@ -349,7 +349,7 @@ export default function Home() {
           typeof payload.text !== 'string' || !payload.text.trim())
           throw Error('O servidor avançado não gerou uma resposta válida.');
         reply = payload.text;
-        replySource = 'native';
+        replySource = 'agent';
         if ('sources' in payload && Array.isArray(payload.sources)) {
           const links = payload.sources.filter((r): r is {name:string;url:string} =>
             r && typeof r.name === 'string' && typeof r.url === 'string' &&
@@ -649,6 +649,8 @@ export default function Home() {
                       <span className="quickReplyNote">Resposta rápida do aplicativo · sem geração por modelo</span>}
                     {message.role === 'assistant' && message.source === 'native' &&
                       <span className="quickReplyNote">REZ Native · motor próprio de regras e conhecimento · sem LLM externo</span>}
+                    {message.role === 'assistant' && message.source === 'agent' &&
+                      <span className="quickReplyNote">REZ Avançado · execução na Vercel · motor de regras e conhecimento, sem LLM externo</span>}
                     {message.role === 'assistant' && (
                       <button type="button" className="copyMessage"
                         onClick={() => void copyMessage(index, message.content)}
