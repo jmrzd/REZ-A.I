@@ -7,7 +7,7 @@
  */
 export type InstantAnswer = { text: string; kind: 'instant' };
 
-export function instantAnswer(text: string): InstantAnswer | null {
+export function instantAnswer(text: string, now: Date = new Date()): InstantAnswer | null {
   const normalized = text.trim().toLowerCase()
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .replace(/[!?.,;:]+/g, ' ')
@@ -15,6 +15,12 @@ export function instantAnswer(text: string): InstantAnswer | null {
 
   const reply = (answer: string): InstantAnswer => ({ text: answer, kind: 'instant' });
 
+  // The time is available from the visitor's device, not from an LLM.
+  // This avoids downloading hundreds of MB just to answer 'que horas são'.
+  if (/^(que horas sao|que horas e|qual e a hora|qual a hora|me diga as horas|horas|que hora e agora|que horas sao agora)$/.test(normalized)) {
+    const time = new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit' }).format(now);
+    return reply('Agora são ' + time + ' no horário configurado no seu dispositivo.');
+  }
   if (/^(oi+|oie+|ola+|e ai|eae|hey|hello|hi|opa)$/.test(normalized)) {
     return reply('Oi! Eu sou a REZ A.I. Posso conversar, ajudar com programação e consultar os documentos que você adicionar à memória. Para perguntas mais completas, preciso carregar um modelo aberto no seu dispositivo uma vez.');
   }
