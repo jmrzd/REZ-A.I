@@ -47,6 +47,7 @@ export default function Home() {
   const [docsOpen, setDocsOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<Progress | null>(null);
+  const [engineStage, setEngineStage] = useState<'gpu' | 'cpu' | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [showPermissions, setShowPermissions] = useState(false);
   const [error, setError] = useState('');
@@ -101,6 +102,7 @@ export default function Home() {
     setActive(null);
     setDraft('');
     setProgress(null);
+    setEngineStage(null);
     setError('');
     setCopied(null);
     setMenuOpen(false);
@@ -182,15 +184,26 @@ export default function Home() {
       : [{ id, title: content.slice(0, 50), messages: next, sources: retrieval.sources }, ...previous]);
     setDraft('');
     setBusy(true);
-    setProgress({ text: 'Iniciando modelo independente no seu dispositivo...' });
+    setProgress({ text: 'Preparando resposta. Se for necessário baixar um modelo, a primeira vez será mais lenta...' });
     setError('');
     setCopied(null);
 
     let reply = '';
     let replySource: 'instant' | 'model' = 'model';
+    let flushTimer: ReturnType<typeof setTimeout> | null = null;
     const showReply = () => setChats(previous => previous.map(chat => chat.id === id
       ? { ...chat, messages: reply ? [...next, { role: 'assistant', content: reply, source: replySource }] : next }
       : chat));
+    // React previously re-rendered and persisted the entire chat for EVERY
+    // tiny generated fragment. Batch UI commits for smoother CPU/GPU streaming.
+    const flushReply = () => {
+      if (flushTimer !== null) { clearTimeout(flushTimer); flushTimer = null; }
+      showReply();
+    };
+    const queueReply = () => {
+      if (flushTimer === null)
+        flushTimer = setTimeout(() => { flushTimer = null; showReply(); }, 100);
+    };
 
     try {
       const instant = instantAnswer(content);
@@ -203,10 +216,13 @@ export default function Home() {
         await generateLocal({
           messages: next, context: retrieval.context,
           signal: controller.signal,
-          onProgress: setProgress,
+          onProgress: update => {
+            setProgress(update);
+            if (update.stage) setEngineStage(update.stage);
+          },
           onDelta: text => {
             reply += text;
-            showReply();
+            queueReply();
           },
         });
         if (!reply.trim())
@@ -215,7 +231,7 @@ export default function Home() {
     } catch (err) {
       setError(controller.signal.aborted ? 'Resposta interrompida.' : friendlyError(err));
     } finally {
-      showReply();
+      flushReply();
       if (abortRef.current === controller) abortRef.current = null;
       setBusy(false);
       setProgress(null);
@@ -279,8 +295,10 @@ export default function Home() {
         {showPermissions && <ToolApprovalDemo onClose={() => setShowPermissions(false)} />}
         <div className="modelNotice" role="status">
           <Cpu size={16} />
-          <span><strong>REZ A.I · Modo automático.</strong> Saudações respondem imediatamente. Para perguntas abertas, a REZ carrega um modelo aberto no dispositivo e tenta CPU se a GPU falhar.
-            {hasGpu === false && ' Este navegador não detectou WebGPU: perguntas abertas usarão CPU e podem demorar.'}
+          <span><strong>REZ A.I · Modo automático.</strong> Aceleração pela GPU quando possível; a CPU funciona sem GPU, mas é mais lenta.
+            {engineStage === 'cpu' && ' Processamento atual: CPU. Para mais velocidade, habilite a aceleração gráfica/WebGPU no navegador.'}
+            {engineStage === 'gpu' && ' Processamento atual: WebGPU.'}
+            {hasGpu === false && engineStage === null && ' WebGPU não detectada; perguntas abertas podem ser lentas.'}
           </span>
         </div>
 
