@@ -181,3 +181,11 @@
 .cloudHealthButton{margin-left:10px;display:inline-flex;align-items:center;white-space:nowrap;padding:5px 9px;border:1px solid #6d5485;border-radius:8px;background:#281d35;color:#e6d7f4;font-size:11px;font-weight:600;cursor:pointer}
 .cloudHealthButton:disabled{opacity:.6;cursor:default}
 .cloudHealthButton:not(:disabled):hover{background:#3b2a52}
+
+
+/* REZ Native: compact three-engine switch and clear native answer badge. */
+.rezModeSwitch{gap:3px;flex-wrap:nowrap}
+.rezModeSwitch button{min-width:0;white-space:nowrap}
+.rezModeSwitch button[aria-pressed="true"]{box-shadow:0 0 0 1px #a07bd7}
+@media(max-width:900px){.rezModeSwitch button{font-size:10px;padding:6px}}
+@media(max-width:620px){.rezModeSwitch{max-width:100%;overflow-x:auto}.rezModeSwitch button{font-size:10px;padding:6px}}
