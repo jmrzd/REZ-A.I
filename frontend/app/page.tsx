@@ -4,19 +4,21 @@ import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'r
 import {
   BrainCircuit, Send, Plus, PanelLeft, Bot, UserRound, Sparkles,
   Trash2, X, StopCircle, Cpu, Download, Copy, Check,
-  ShieldCheck, Files, Upload, FileText, HardDrive, ChevronDown,
+  ShieldCheck, Files, Upload, FileText, HardDrive, ChevronDown, BookOpen,
 } from 'lucide-react';
 import ToolApprovalDemo from './ToolApprovalDemo';
 import { generateLocal, prepareLocal, hasWebGPU, type ChatTurn, type Progress } from './local-ai';
 import { instantAnswer } from './instant-replies';
 import { generateHosted, type AssistMode } from './cloud-ai';
+import NetworkKnowledgePanel from './NetworkKnowledgePanel';
+import { searchPublicKnowledge, sourcesAsPromptContext, type PublicHit } from './knowledge-web';
 import {
   buildLocalContext, readDocuments, removeDocument, saveDocument,
   type LocalDocument, MAX_DOC_BYTES, MAX_DOCS,
 } from './knowledge';
 
 type RezMessage = ChatTurn & { source?: 'instant' | 'model' };
-type Conversation = { id: string; title: string; messages: RezMessage[]; sources?: string[] };
+type Conversation = { id: string; title: string; messages: RezMessage[]; sources?: string[]; webSources?: PublicHit[] };
 
 const HISTORY_KEY = 'rez-ai-conversations-v1';
 
@@ -51,6 +53,8 @@ export default function Home() {
   const [cloudConfigured, setCloudConfigured] = useState<boolean | null>(null);
   const [documents, setDocuments] = useState<LocalDocument[]>([]);
   const [docsOpen, setDocsOpen] = useState(false);
+  const [networkOpen, setNetworkOpen] = useState(false);
+  const [searchWebForAnswers, setSearchWebForAnswers] = useState(false);
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<Progress | null>(null);
   const [engineStage, setEngineStage] = useState<'gpu' | 'cpu' | 'cloud' | null>(null);
@@ -262,10 +266,27 @@ export default function Home() {
           throw Error('O cérebro em servidor ainda não foi conectado. É preciso publicar o Worker na Cloudflare e configurar a ligação segura à Vercel. Nenhum modelo será baixado automaticamente no seu PC.');
         }
         setEngineStage('cloud');
+        let publicEvidence = '';
+        if (searchWebForAnswers) {
+          setProgress({ text: 'Buscando referências em fontes públicas antes de responder...' });
+          try {
+            const research = await searchPublicKnowledge(content,
+              AbortSignal.any([controller.signal, AbortSignal.timeout(5200)]));
+            const citations = research.results.slice(0, 5);
+            publicEvidence = sourcesAsPromptContext(citations);
+            setChats(previous => previous.map(chat => chat.id === id
+              ? { ...chat, webSources: citations } : chat));
+          } catch {
+            if (controller.signal.aborted) throw new DOMException('Cancelado', 'AbortError');
+            // A temporary outage in public sources must not invent evidence,
+            // and must not block a cloud inference already authorized.
+          }
+        }
+        setProgress({ text: 'Gerando resposta no cérebro da REZ na nuvem...' });
         await generateHosted(next, sendDocsToCloud ? retrieval.context : '', controller.signal, text => {
           reply += text;
           queueReply();
-        }, assistantMode);
+        }, assistantMode, publicEvidence);
         if (!reply.trim()) throw Error('A IA hospedada terminou sem produzir texto.');
       } else {
         await generateLocal({
@@ -356,7 +377,11 @@ export default function Home() {
               {modelReady ? <Check size={16} /> : <Download size={16} />}
               <span>{warmBusy ? 'Cancelar preparo' : modelReady ? 'IA pronta' : 'Preparar IA'}</span>
             </button>}
-            <button className="permissionsToggle" onClick={() => setDocsOpen(v => !v)}
+            <button className="permissionsToggle knowledgeNetworkButton" type="button"
+              aria-expanded={networkOpen} onClick={() => { setNetworkOpen(v => !v); setDocsOpen(false); }}>
+              <BookOpen size={16} /> <span>Fontes</span>
+            </button>
+            <button className="permissionsToggle" onClick={() => { setDocsOpen(v => !v); setNetworkOpen(false); }}
               aria-expanded={docsOpen} type="button">
               <Files size={16} /> <span>Memória ({documents.length})</span>
             </button>
@@ -394,6 +419,14 @@ export default function Home() {
               </span>}
         </div>
 
+        {networkOpen && (
+          <NetworkKnowledgePanel
+            onClose={() => setNetworkOpen(false)}
+            onUseQuestion={text => setDraft(text)}
+            useSearchForChat={searchWebForAnswers}
+            onSearchToggle={setSearchWebForAnswers}
+          />
+        )}
         {docsOpen && (
           <section className="knowledgePanel" aria-label="Memória local">
             <div className="knowledgeHeader">
@@ -472,6 +505,16 @@ export default function Home() {
               {current?.sources?.length ? (
                 <div className="knowledgeSources">Documentos consultados: {current.sources.join(', ')}</div>
               ) : null}
+              {current?.webSources?.length ? (
+                <section className="webCitations" aria-label="Referências públicas consultadas">
+                  <strong>Fontes públicas consultadas (títulos e trechos, não artigos completos)</strong>
+                  {current.webSources.map(source =>
+                    <a key={source.url} href={source.url} rel="noopener noreferrer" target="_blank">
+                      {source.title} · {source.provider}
+                    </a>
+                  )}
+                </section>
+              ) : null}
               <div ref={bottomRef} />
             </div>}
         </div>
@@ -502,7 +545,7 @@ export default function Home() {
             : <button disabled={!draft.trim() || warmBusy} aria-label="Enviar mensagem"><Send size={19} /></button>}
         </form>
         <footer>{chatMode === 'cloud'
-          ? 'Nuvem: a REZ envia mensagens e trechos relevantes dos documentos ao serviço Cloudflare. Sem download de modelos no PC. Cota gratuita limitada.'
+          ? 'Nuvem: mensagens seguem para Cloudflare. Documentos e pesquisa pública exigem sua autorização no painel. Fontes públicas não substituem verificação.'
           : 'Local: sem enviar prompts a servidores de inferência. Modelos abertos exigem RAM/CPU/GPU e cache de pesos.'}</footer>
       </section>
     </main>
