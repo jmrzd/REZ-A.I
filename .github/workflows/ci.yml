@@ -54,3 +54,39 @@ jobs:
         run: npm run typecheck
       - name: Bundle Cloudflare Worker without deploying
         run: npx wrangler deploy --dry-run --outdir ./dist
+
+  knowledge-training:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install Hugging Face Datasets and lightweight ML dependencies
+        run: python -m pip install -r training/requirements.txt
+      - name: Prepare full curated catalog and unlabelled evaluation questions
+        run: python training/prepare_hf_datasets.py
+      - name: Train local CPU intent classifier and measure held-out accuracy
+        run: python training/train_intent_router.py
+      - name: Verify output counts and no fabricated training answers
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          data=json.loads(Path("training/build/manifest.json").read_text())
+          assert data["source_metadata_count"] == 440
+          assert data["rss_metadata_count"] == 23
+          assert data["question_only_count"] == 360
+          assert data["labelled_question_answer_pairs"] == 0
+          assert data["language_model_fine_tuned"] is False
+          metrics=json.loads(Path("training/build/models/router-evaluation.json").read_text())
+          assert 0 <= metrics["accuracy_heldout"] <= 1
+          print("Intent router held-out accuracy:",round(metrics["accuracy_heldout"],4))
+          PY
+      - name: Save training/evaluation outputs (no model uploaded to public app)
+        uses: actions/upload-artifact@v4
+        with:
+          name: rez-knowledge-intent-training
+          path: training/build/
+          if-no-files-found: error
+          retention-days: 7
