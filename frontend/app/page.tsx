@@ -60,7 +60,7 @@ export default function Home(){
    }
   };
   try{
-   const url=(process.env.NEXT_PUBLIC_API_URL||'http://localhost:8000')+'/chat/stream';
+   const url=(typeof window!=='undefined' && ['localhost','127.0.0.1'].includes(window.location.hostname)) ? (process.env.NEXT_PUBLIC_API_URL||'http://localhost:8000')+'/chat/stream' : '/api/chat/stream';
    const res=await fetch(url,{
     method:'POST',signal:controller.signal,
     headers:{'Content-Type':'application/json'},
