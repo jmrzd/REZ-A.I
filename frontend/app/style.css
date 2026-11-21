@@ -189,3 +189,9 @@
 .rezModeSwitch button[aria-pressed="true"]{box-shadow:0 0 0 1px #a07bd7}
 @media(max-width:900px){.rezModeSwitch button{font-size:10px;padding:6px}}
 @media(max-width:620px){.rezModeSwitch{max-width:100%;overflow-x:auto}.rezModeSwitch button{font-size:10px;padding:6px}}
+
+/* REZ Avançado: credential is used only in memory and never saved to history. */
+.rezAgentAdminKey{width:min(270px,85vw);max-width:100%;padding:8px 10px;color:#eee3ff;
+background:#171120;border:1px solid #725890;border-radius:9px;font-size:12px;outline:none}
+.rezAgentAdminKey:focus{border-color:#b69bd9;box-shadow:0 0 0 2px #7b5aa044}
+@media(max-width:680px){.rezAgentAdminKey{width:min(210px,72vw);font-size:11px}}
