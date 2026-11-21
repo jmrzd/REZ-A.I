@@ -8,7 +8,7 @@
 - Tipo: *agent harness*, um orquestrador de agentes e ferramentas, escrito principalmente em Node/TypeScript. O README o chama de *developer preview*.
 - Licença: **MIT**. Respeitar também licenças das dependências informadas em THIRD_PARTY_NOTICES.md.
 - Execução: `npx @deepseek-ai/dsh web`, Web UI local na porta 3080; requer Node >=24.9.0, serviço de longa duração e armazenamento para perfis/sessões.
-- **Não contém um modelo de linguagem completo**. A documentação `docs/user/guide/index.md` instrui configurar uma chave do serviço DeepSeek; também aceita endpoints personalizados para modelos auto-hospedados. O repositório sozinho **não transforma a REZ em uma IA generativa grátis ou ilimitada**.
+- **Não contém um modelo de linguagem completo**. A documentação `docs/user/guide/index.md` mostra configuração por chave da API, mas os plugins `llm-deepseek-account` e `deepseek-account` também oferecem login de conta no perfil completo, **sem chave da API**, se a conta/modelo for elegível. Esse acesso pode impor cotas, exigir saldo ou recusar uma solicitação. Endpoints privados para modelos auto-hospedados são outra opção. O repositório sozinho **não transforma a REZ em uma IA generativa grátis ou ilimitada**.
 - Segurança: `SAFETY.md` avisa que **não existe auditoria de segurança** e que agentes podem executar comandos, tocar arquivos e credenciais; recomenda ambiente isolado, mínimo privilégio e backups.
 - Redes: `docs/user/guide/public-deployments.md` exige preservar `Host`, WebSocket, cookies e URL pública. A interface tem um token de sessão na URL de inicialização. Nenhum token deve ir ao GitHub nem ao chat.
 
