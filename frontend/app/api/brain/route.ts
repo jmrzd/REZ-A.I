@@ -6,6 +6,8 @@
  * Vercel Authentication MUST remain enabled; this endpoint has no app-level
  * per-user authentication or durable rate limiting.
  */
+import { createHmac } from 'node:crypto';
+
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
@@ -46,6 +48,8 @@ export async function POST(request: Request): Promise<Response> {
   if (!settings) {
     return fail(503, 'O cérebro na nuvem ainda não foi conectado. A configuração do Cloudflare Worker é necessária antes de usar a REZ no servidor.');
   }
+  if (request.headers.get('sec-fetch-site') === 'cross-site')
+    return fail(403, 'Origem não autorizada.');
   const origin = request.headers.get('origin');
   if (origin && origin !== new URL(request.url).origin)
     return fail(403, 'Origem não autorizada.');
@@ -59,7 +63,9 @@ export async function POST(request: Request): Promise<Response> {
     if (!body || typeof body !== 'object' || !('messages' in body))
       return fail(400, 'Formato inválido.');
     const messages = (body as { messages: unknown }).messages;
-    if (!Array.isArray(messages) || messages.length < 1 || messages.length > 12 ||
+    const mode = 'mode' in body ? (body as { mode: unknown }).mode : 'general';
+    if (!['general', 'study', 'code', 'summary'].includes(String(mode)) ||
+        !Array.isArray(messages) || messages.length < 1 || messages.length > 12 ||
         !messages.every(m =>
           m && typeof m === 'object' &&
           (m.role === 'user' || m.role === 'assistant') &&
@@ -71,6 +77,14 @@ export async function POST(request: Request): Promise<Response> {
     return fail(400, 'Não foi possível interpretar a mensagem.');
   }
 
+  // Vercel supplies the true client address in x-forwarded-for. Never forward
+  // raw IPs: only an application-secret HMAC reaches the Cloudflare quota.
+  // When absent, use a shared 'unknown' bucket (restrictive, fail-closed).
+  const forwarded = request.headers.get('x-forwarded-for');
+  const ip = forwarded?.split(',')[0]?.trim() || 'unknown';
+  const visitorHash = createHmac('sha256', settings.secret)
+    .update(ip.slice(0, 128)).digest('hex');
+
   let remote: Response;
   try {
     remote = await fetch(settings.url, {
@@ -79,6 +93,7 @@ export async function POST(request: Request): Promise<Response> {
         'Content-Type': 'application/json',
         'Accept': 'text/event-stream',
         'Authorization': 'Bearer ' + settings.secret,
+        'x-rez-visitor-id': visitorHash,
       },
       body: raw,
       signal: request.signal,
