@@ -294,6 +294,8 @@ export default function Home() {
               content: m.content.slice(0, 4000),
             })),
             documentContext: sendDocsToCloud ? retrieval.context.slice(0, 3000) : '',
+            // Explicit opt-in: only the question may be sent to Wikimedia.
+            allowPublicResearch: searchWebForAnswers,
           }),
         });
         const payload: unknown = await response.json().catch(() => null);
@@ -311,10 +313,13 @@ export default function Home() {
           const refs = payload.sources.filter((r): r is {name: string;url: string} =>
             r && typeof r.name === 'string' && typeof r.url === 'string' &&
             r.url.startsWith('https://')).slice(0, 3);
+          const citedWiki = 'method' in payload && payload.method === 'reference';
           setChats(previous => previous.map(chat => chat.id === id
             ? { ...chat, webSources: refs.map(r => ({
-              title: r.name, url: r.url, excerpt: 'Link do diretório; página não consultada',
-              provider: 'Diretório REZ' as const, kind: 'diretorio',
+              title: r.name, url: r.url,
+              excerpt: citedWiki ? 'Trecho da página pública consultado' : 'Link do diretório; página não consultada',
+              provider: citedWiki ? 'Wikipédia' as const : 'Diretório REZ' as const,
+              kind: citedWiki ? 'enciclopedia' : 'diretorio',
             })) } : chat));
         }
         showReply();
