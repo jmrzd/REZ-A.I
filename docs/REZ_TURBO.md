@@ -35,3 +35,11 @@ Não existe execução de IA sem memória: o modelo consome RAM/VRAM na infraest
 ## Validação
 
 O build pode verificar compilação e contratos. Uma conversa real na nuvem só fica comprovada depois do deployment receber READY e de obter resposta pelo endpoint autenticado.
+
+## Correção de resposta vazia (v0.3.1)
+
+A versão anterior devolvia HTTP 200 com corpo vazio quando a biblioteca de streaming recebia um erro do provedor. Agora a REZ consulta o status HTTP do AI Gateway antes de transmitir, converte o fluxo SSE com mensagens `delta`, `error` e `done` e exibe erros seguros no chat.
+
+O modo Turbo usa a credencial OIDC do deployment Vercel ou uma chave AI Gateway configurada exclusivamente no servidor. Se a conta não estiver habilitada para o AI Gateway (inclusive por restrições de verificação), a REZ deve informar o bloqueio em vez de aparentar gerar uma resposta vazia. A oferta gratuita não dispensa limites da conta, requisitos do serviço ou custos normais de infraestrutura. Nenhuma rota é configurada para um modelo pago.
+
+A execução depende de autorização da conta junto ao AI Gateway. O código sozinho não pode ativar créditos ou verificar a identidade do titular.
