@@ -17,7 +17,7 @@ import {
   type LocalDocument, MAX_DOC_BYTES, MAX_DOCS,
 } from './knowledge';
 
-type RezMessage = ChatTurn & { source?: 'instant' | 'model' };
+type RezMessage = ChatTurn & { source?: 'instant' | 'model' | 'native' };
 type Conversation = { id: string; title: string; messages: RezMessage[]; sources?: string[]; webSources?: PublicHit[] };
 
 const HISTORY_KEY = 'rez-ai-conversations-v1';
@@ -46,7 +46,8 @@ export default function Home() {
   const [ready, setReady] = useState(false);
   const [draft, setDraft] = useState('');
   const [hasGpu, setHasGpu] = useState<boolean | null>(null);
-  const [chatMode, setChatMode] = useState<'cloud' | 'local'>('cloud');
+  // Native works on the Vercel server without a Cloudflare account or model API.
+  const [chatMode, setChatMode] = useState<'native' | 'cloud' | 'local'>('native');
   const [assistantMode, setAssistantMode] = useState<AssistMode>('general');
   // Explicit consent: do not send document excerpts to the Cloudflare model by default.
   const [sendDocsToCloud, setSendDocsToCloud] = useState(false);
@@ -245,14 +246,16 @@ export default function Home() {
       : [{ id, title: content.slice(0, 50), messages: next, sources: sharedSources }, ...previous]);
     setDraft('');
     setBusy(true);
-    setProgress({ text: chatMode === 'cloud'
-      ? 'Consultando o cérebro da REZ no servidor, sem carregar modelos no seu computador...'
-      : 'Preparando o modelo no seu dispositivo (primeiro download pode demorar)...' });
+    setProgress({ text: chatMode === 'native'
+      ? 'REZ Native: analisando sua pergunta com o nosso motor de conhecimento...'
+      : chatMode === 'cloud'
+        ? 'Consultando o modelo hospedado na Cloudflare...'
+        : 'Preparando o modelo no seu dispositivo (primeiro download pode demorar)...' });
     setError('');
     setCopied(null);
 
     let reply = '';
-    let replySource: 'instant' | 'model' = 'model';
+    let replySource: 'instant' | 'model' | 'native' = 'model';
     let flushTimer: ReturnType<typeof setTimeout> | null = null;
     const showReply = () => setChats(previous => previous.map(chat => chat.id === id
       ? { ...chat, messages: reply ? [...next, { role: 'assistant', content: reply, source: replySource }] : next }
@@ -274,6 +277,46 @@ export default function Home() {
         // Explicitly labeled deterministic response: zero model download.
         replySource = 'instant';
         reply = instant.text;
+        showReply();
+      } else if (chatMode === 'native') {
+        // The REZ Native engine runs entirely on the website's own server.
+        // It uses verified examples, rules and a source directory, not an LLM.
+        // No automatic switch to GPU downloads or paid inference APIs.
+        const response = await fetch('/api/rez-native', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          cache: 'no-store',
+          signal: controller.signal,
+          body: JSON.stringify({
+            mode: assistantMode,
+            messages: next.slice(-14).map(m => ({
+              role: m.role,
+              content: m.content.slice(0, 4000),
+            })),
+            documentContext: sendDocsToCloud ? retrieval.context.slice(0, 3000) : '',
+          }),
+        });
+        const payload: unknown = await response.json().catch(() => null);
+        if (!response.ok) {
+          const message = payload && typeof payload === 'object' && 'error' in payload &&
+            typeof payload.error === 'string' ? payload.error : 'O cérebro nativo não respondeu.';
+          throw new Error(message);
+        }
+        if (!payload || typeof payload !== 'object' || !('text' in payload) ||
+          typeof payload.text !== 'string' || !payload.text.trim())
+          throw new Error('O servidor nativo não gerou uma resposta válida.');
+        reply = payload.text;
+        replySource = 'native';
+        if ('sources' in payload && Array.isArray(payload.sources)) {
+          const refs = payload.sources.filter((r): r is {name: string;url: string} =>
+            r && typeof r.name === 'string' && typeof r.url === 'string' &&
+            r.url.startsWith('https://')).slice(0, 3);
+          setChats(previous => previous.map(chat => chat.id === id
+            ? { ...chat, webSources: refs.map(r => ({
+              title: r.name, url: r.url, excerpt: 'Link do diretório; página não consultada',
+              provider: 'Diretório REZ' as const, kind: 'diretorio',
+            })) } : chat));
+        }
         showReply();
       } else if (chatMode === 'cloud') {
         if (cloudConfigured !== true) {
@@ -393,12 +436,17 @@ export default function Home() {
             <div className="heading">Rez A.I <span>Seu espaço de inteligência independente</span></div>
           </div>
           <div className="headerControls">
-            <span className="localBadge"><ShieldCheck size={13} /> {chatMode === 'cloud' ? 'IA no servidor' : '100% local'}</span>
-            <div className="rezModeSwitch" role="group" aria-label="Onde a REZ executa a IA">
+            <span className="localBadge"><ShieldCheck size={13} /> {chatMode === 'native' ? 'REZ sem chave' : chatMode === 'cloud' ? 'IA na nuvem' : 'Modelo no dispositivo'}</span>
+            <div className="rezModeSwitch" role="group" aria-label="Motor de respostas da REZ">
+              <button type="button" disabled={busy || warmBusy} aria-pressed={chatMode === 'native'}
+                className={chatMode === 'native' ? 'selected' : ''}
+                onClick={() => { setChatMode('native'); setError(''); setProgress(null); setEngineStage(null); }}>
+                REZ Native
+              </button>
               <button type="button" disabled={busy || warmBusy} aria-pressed={chatMode === 'cloud'}
                 className={chatMode === 'cloud' ? 'selected' : ''}
                 onClick={() => { setChatMode('cloud'); setError(''); setProgress(null); setEngineStage(null); }}>
-                Nuvem
+                Cloudflare
               </button>
               <button type="button" disabled={busy || warmBusy} aria-pressed={chatMode === 'local'}
                 className={chatMode === 'local' ? 'selected' : ''}
@@ -425,7 +473,7 @@ export default function Home() {
               aria-expanded={showPermissions}>
               <ShieldCheck size={16} /> <span>Permissões</span>
             </button>
-            {chatMode === 'cloud' && (
+            {chatMode !== 'local' && (
               <select className="rezTaskMode" aria-label="Modo da REZ" value={assistantMode}
                 disabled={busy || warmBusy}
                 onChange={e => setAssistantMode(e.target.value as AssistMode)}>
@@ -435,13 +483,19 @@ export default function Home() {
                 <option value="summary">Resumo</option>
               </select>
             )}
-            <span className="rezAutoLabel"><BrainCircuit size={16} /> REZ A.I <span>{chatMode === 'cloud' ? 'Servidor' : 'Local'}</span></span>
+            <span className="rezAutoLabel"><BrainCircuit size={16} /> REZ A.I <span>{chatMode === 'native' ? 'Nativo' : chatMode === 'cloud' ? 'Cloudflare' : 'Local'}</span></span>
           </div>
         </header>
         {showPermissions && <ToolApprovalDemo onClose={() => setShowPermissions(false)} />}
         <div className="modelNotice" role="status">
           <Cpu size={16} />
-          {chatMode === 'cloud'
+          {chatMode === 'native'
+            ? <span><strong>REZ Native · Motor próprio conectado.</strong>
+                Respostas de programação, estudos, cálculos simples e referências criadas pelo projeto.
+                Executado no servidor, sem chave de API e sem usar a GPU do seu PC.
+                É um sistema de regras e recuperação de informações, não um modelo generativo avançado.
+              </span>
+            : chatMode === 'cloud'
             ? <span><strong>REZ A.I · Cérebro no servidor.</strong> A geração será feita pela Cloudflare, não pela CPU/GPU do seu PC. {cloudConfigured === true
                 ? (cloudOnline === true
                     ? 'Worker acessível e vinculações detectadas. As mensagens serão processadas na nuvem, sujeitas à cota gratuita.'
@@ -483,12 +537,13 @@ export default function Home() {
                 onClick={() => setDocsOpen(false)}><ChevronDown size={18} /></button>
             </div>
             <p className="knowledgeMeta">{documents.length}/{MAX_DOCS} documentos · até {Math.round(MAX_DOC_BYTES / 1000)} KB cada · TXT, MD, CSV, JSON, JS, TS, PY, SQL</p>
-            {chatMode === 'cloud' && (
+            {chatMode !== 'local' && (
               <label className="cloudDocsConsent">
                 <input type="checkbox" checked={sendDocsToCloud}
                   onChange={e => setSendDocsToCloud(e.target.checked)} />
-                <span>Permitir enviar trechos relevantes dos meus documentos à Cloudflare para responder.
-                  Desativado por padrão; os arquivos completos continuam neste navegador.</span>
+                <span>Permitir enviar trechos relevantes dos meus documentos ao servidor da REZ
+                  {chatMode === 'cloud' ? ' (Cloudflare)' : ' (REZ Native/Vercel)' }.
+                  Desativado por padrão; os arquivos completos permanecem neste navegador.</span>
               </label>
             )}
             {documents.length ? (
@@ -534,6 +589,8 @@ export default function Home() {
                     <div className="bubble">{message.content}</div>
                     {message.role === 'assistant' && message.source === 'instant' &&
                       <span className="quickReplyNote">Resposta rápida do aplicativo · sem geração por modelo</span>}
+                    {message.role === 'assistant' && message.source === 'native' &&
+                      <span className="quickReplyNote">REZ Native · motor próprio de regras e conhecimento · sem LLM externo</span>}
                     {message.role === 'assistant' && (
                       <button type="button" className="copyMessage"
                         onClick={() => void copyMessage(index, message.content)}
@@ -587,9 +644,11 @@ export default function Home() {
               aria-label="Parar geração"><StopCircle size={20} /></button>
             : <button disabled={!draft.trim() || warmBusy} aria-label="Enviar mensagem"><Send size={19} /></button>}
         </form>
-        <footer>{chatMode === 'cloud'
-          ? 'Nuvem: mensagens seguem para Cloudflare. Documentos e pesquisa pública exigem sua autorização no painel. Fontes públicas não substituem verificação.'
-          : 'Local: sem enviar prompts a servidores de inferência. Modelos abertos exigem RAM/CPU/GPU e cache de pesos.'}</footer>
+        <footer>{chatMode === 'native'
+          ? 'REZ Native: perguntas processadas no servidor da REZ, sem modelo externo; conteúdo limitado a regras e materiais conhecidos. Documentos só são enviados com sua autorização.'
+          : chatMode === 'cloud'
+            ? 'Cloudflare: modelo generativo remoto sujeito a conta, configuração e cota gratuita. Documentos e pesquisa pública exigem sua autorização.'
+            : 'Local: o modelo aberto é baixado e executado no dispositivo, exigindo RAM e CPU/GPU.'}</footer>
       </section>
     </main>
   );
