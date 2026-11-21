@@ -9,6 +9,7 @@ import {
 import ToolApprovalDemo from './ToolApprovalDemo';
 import { generateLocal, prepareLocal, hasWebGPU, type ChatTurn, type Progress } from './local-ai';
 import { instantAnswer } from './instant-replies';
+import { generateHosted } from './cloud-ai';
 import {
   buildLocalContext, readDocuments, removeDocument, saveDocument,
   type LocalDocument, MAX_DOC_BYTES, MAX_DOCS,
@@ -43,11 +44,13 @@ export default function Home() {
   const [ready, setReady] = useState(false);
   const [draft, setDraft] = useState('');
   const [hasGpu, setHasGpu] = useState<boolean | null>(null);
+  const [chatMode, setChatMode] = useState<'cloud' | 'local'>('cloud');
+  const [cloudConfigured, setCloudConfigured] = useState<boolean | null>(null);
   const [documents, setDocuments] = useState<LocalDocument[]>([]);
   const [docsOpen, setDocsOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<Progress | null>(null);
-  const [engineStage, setEngineStage] = useState<'gpu' | 'cpu' | null>(null);
+  const [engineStage, setEngineStage] = useState<'gpu' | 'cpu' | 'cloud' | null>(null);
   const [warmBusy, setWarmBusy] = useState(false);
   const [modelReady, setModelReady] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -82,6 +85,15 @@ export default function Home() {
       setError('Não foi possível acessar a memória de documentos do navegador.');
     });
     setReady(true);
+  }, []);
+
+  useEffect(() => {
+    void fetch('/api/brain', { cache: 'no-store' })
+      .then(async res => {
+        const data = await res.json() as { configured?: boolean };
+        setCloudConfigured(res.ok && data.configured === true);
+      })
+      .catch(() => setCloudConfigured(false));
   }, []);
 
   useEffect(() => {
@@ -172,7 +184,7 @@ export default function Home() {
   }
 
   async function prepare() {
-    if (busy || warmBusy || modelReady) return;
+    if (busy || warmBusy || modelReady || chatMode !== 'local') return;
     const controller = new AbortController();
     warmAbortRef.current = controller;
     setWarmBusy(true);
@@ -211,7 +223,9 @@ export default function Home() {
       : [{ id, title: content.slice(0, 50), messages: next, sources: retrieval.sources }, ...previous]);
     setDraft('');
     setBusy(true);
-    setProgress({ text: 'Preparando resposta. Se for necessário baixar um modelo, a primeira vez será mais lenta...' });
+    setProgress({ text: chatMode === 'cloud'
+      ? 'Consultando o cérebro da REZ no servidor, sem carregar modelos no seu computador...'
+      : 'Preparando o modelo no seu dispositivo (primeiro download pode demorar)...' });
     setError('');
     setCopied(null);
 
@@ -239,6 +253,16 @@ export default function Home() {
         replySource = 'instant';
         reply = instant.text;
         showReply();
+      } else if (chatMode === 'cloud') {
+        if (cloudConfigured !== true) {
+          throw Error('O cérebro em servidor ainda não foi conectado. É preciso publicar o Worker na Cloudflare e configurar a ligação segura à Vercel. Nenhum modelo será baixado automaticamente no seu PC.');
+        }
+        setEngineStage('cloud');
+        await generateHosted(next, retrieval.context, controller.signal, text => {
+          reply += text;
+          queueReply();
+        });
+        if (!reply.trim()) throw Error('A IA hospedada terminou sem produzir texto.');
       } else {
         await generateLocal({
           messages: next, context: retrieval.context,
@@ -293,8 +317,8 @@ export default function Home() {
         </nav>
         <div className="sidefoot">
           <span className="statusDot" /> REZ A.I <span>• Independente</span>
-          <p>Sem chave de API, sem provedor de inferência, sem cobrança por mensagem.</p>
-          <p>Chat e arquivos permanecem neste navegador.</p>
+          <p>Modo Nuvem: processamento no servidor Cloudflare, sujeito a uma cota gratuita diária.</p>
+          <p>Histórico permanece no navegador; mensagens e trechos relevantes enviados ao servidor no modo Nuvem.</p>
           <button className="historyExport" onClick={exportHistory}
             disabled={!chats.length}>Exportar conversas JSON</button>
         </div>
@@ -308,14 +332,26 @@ export default function Home() {
             <div className="heading">Rez A.I <span>Seu espaço de inteligência independente</span></div>
           </div>
           <div className="headerControls">
-            <span className="localBadge"><ShieldCheck size={13} /> 100% local</span>
-            <button className="permissionsToggle warmButton" type="button"
+            <span className="localBadge"><ShieldCheck size={13} /> {chatMode === 'cloud' ? 'IA no servidor' : '100% local'}</span>
+            <div className="rezModeSwitch" role="group" aria-label="Onde a REZ executa a IA">
+              <button type="button" disabled={busy || warmBusy} aria-pressed={chatMode === 'cloud'}
+                className={chatMode === 'cloud' ? 'selected' : ''}
+                onClick={() => { setChatMode('cloud'); setError(''); setProgress(null); setEngineStage(null); }}>
+                Nuvem
+              </button>
+              <button type="button" disabled={busy || warmBusy} aria-pressed={chatMode === 'local'}
+                className={chatMode === 'local' ? 'selected' : ''}
+                onClick={() => { setChatMode('local'); setError(''); setProgress(null); setEngineStage(null); }}>
+                Local
+              </button>
+            </div>
+            {chatMode === 'local' && <button className="permissionsToggle warmButton" type="button"
               onClick={() => warmBusy ? warmAbortRef.current?.abort() : void prepare()}
               disabled={busy || (modelReady && !warmBusy)}
               title={warmBusy ? 'Cancelar a preparação' : modelReady ? 'Modelo pronto nesta aba' : 'Carregar o modelo antes de perguntar; opcional'}>
               {modelReady ? <Check size={16} /> : <Download size={16} />}
               <span>{warmBusy ? 'Cancelar preparo' : modelReady ? 'IA pronta' : 'Preparar IA'}</span>
-            </button>
+            </button>}
             <button className="permissionsToggle" onClick={() => setDocsOpen(v => !v)}
               aria-expanded={docsOpen} type="button">
               <Files size={16} /> <span>Memória ({documents.length})</span>
@@ -324,18 +360,24 @@ export default function Home() {
               aria-expanded={showPermissions}>
               <ShieldCheck size={16} /> <span>Permissões</span>
             </button>
-            <span className="rezAutoLabel"><BrainCircuit size={16} /> REZ A.I <span>Automática</span></span>
+            <span className="rezAutoLabel"><BrainCircuit size={16} /> REZ A.I <span>{chatMode === 'cloud' ? 'Servidor' : 'Local'}</span></span>
           </div>
         </header>
         {showPermissions && <ToolApprovalDemo onClose={() => setShowPermissions(false)} />}
         <div className="modelNotice" role="status">
           <Cpu size={16} />
-          <span><strong>REZ A.I · Modo automático.</strong> Aceleração pela GPU quando possível; a CPU funciona sem GPU, mas é mais lenta.
-            {engineStage === 'cpu' && ' Processamento atual: CPU. Para mais velocidade, habilite a aceleração gráfica/WebGPU no navegador.'}
-            {engineStage === 'gpu' && ' Processamento atual: WebGPU.'}
-            {modelReady && ' Modelo já carregado nesta aba; próximas respostas pulam a inicialização.'}
-            {hasGpu === false && engineStage === null && ' WebGPU não detectada; perguntas abertas podem ser lentas.'}
-          </span>
+          {chatMode === 'cloud'
+            ? <span><strong>REZ A.I · Cérebro no servidor.</strong> A geração será feita pela Cloudflare, não pela CPU/GPU do seu PC. {cloudConfigured === true
+                ? 'Ligação configurada. Mensagens enviadas à nuvem; acesso sujeito à cota gratuita.'
+                : cloudConfigured === false
+                  ? 'O servidor Cloudflare ainda não foi conectado. A REZ não fará downloads locais automaticamente.'
+                  : 'Verificando conexão do servidor...'}</span>
+            : <span><strong>REZ A.I · Modo local opcional.</strong> Aceleração pela GPU quando possível; CPU é mais lenta.
+                {engineStage === 'cpu' && ' Processamento atual: CPU.'}
+                {engineStage === 'gpu' && ' Processamento atual: WebGPU.'}
+                {modelReady && ' Modelo já carregado nesta aba.'}
+                {hasGpu === false && engineStage === null && ' WebGPU não detectada.'}
+              </span>}
         </div>
 
         {docsOpen && (
@@ -376,7 +418,9 @@ export default function Home() {
               <div className="orb"><BrainCircuit size={36} /></div>
               <div className="eyebrow"><Sparkles size={13} /> IA INDEPENDENTE · SEM CHAVES DE API</div>
               <h1>O que vamos criar <em>hoje?</em></h1>
-              <p>Uma única REZ A.I para conversar, aprender programação e consultar documentos locais. Para evitar a espera na primeira pergunta longa, use Preparar IA antes. O primeiro download pode demorar, mas o modelo fica carregado nesta aba.</p>
+              <p>{chatMode === 'cloud'
+                ? 'Nossa interface conectada a um modelo aberto em servidor. Sem downloads pesados no computador e sem depender da GPU local. O serviço precisa estar configurado e possui cota diária.'
+                : 'Modo alternativo no dispositivo: clique em Preparar IA para antecipar o carregamento. O primeiro download e a geração podem ser lentos.'}</p>
               <div className="chips">
                 <button onClick={() => setDraft('Me ajude a criar um projeto em Python')}>Criar com Python ↗</button>
                 <button onClick={() => setDraft('Explique como modelos de linguagem funcionam')}>Aprender IA ↗</button>
@@ -435,7 +479,9 @@ export default function Home() {
               aria-label="Parar geração"><StopCircle size={20} /></button>
             : <button disabled={!draft.trim() || warmBusy} aria-label="Enviar mensagem"><Send size={19} /></button>}
         </form>
-        <footer>Sem API de inferência. Clique em Preparar IA para antecipar o carregamento; perguntas livres ainda dependem da CPU/GPU. Os pesos ficam sujeitos ao cache do navegador.</footer>
+        <footer>{chatMode === 'cloud'
+          ? 'Nuvem: a REZ envia mensagens e trechos relevantes dos documentos ao serviço Cloudflare. Sem download de modelos no PC. Cota gratuita limitada.'
+          : 'Local: sem enviar prompts a servidores de inferência. Modelos abertos exigem RAM/CPU/GPU e cache de pesos.'}</footer>
       </section>
     </main>
   );
