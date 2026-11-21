@@ -8,7 +8,7 @@ export type KnowledgeSource = {
 };
 export type PublicHit = {
   title: string; url: string; excerpt: string;
-  provider: 'Wikipédia' | 'Crossref'; kind: string; date?: string;
+  provider: 'Wikipédia' | 'Crossref' | 'Diretório REZ'; kind: string; date?: string;
 };
 export type SearchResult = {
   query: string; results: PublicHit[]; unavailable: string[];
@@ -201,6 +201,43 @@ export function findSources(
       .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     return terms.every(t => haystack.includes(t));
   }).slice(0, limit);
+}
+
+/**
+ * Local source-directory retrieval. This ranks site names/categories only;
+ * it does NOT fetch the pages or claim the model learned their content.
+ */
+export function rankCatalogSources(
+  sources: KnowledgeSource[], question: string, limit = 3,
+): KnowledgeSource[] {
+  const normalize = (s: string) => s.toLowerCase().normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+  const stopWords = new Set(['que','como','qual','quais','onde','para','com',
+    'uma','umas','uns','uma','por','sobre','mais','quero','preciso','ajuda',
+    'me','de','do','da','dos','das','em','um','o','a','os','as','e','e','ou','no','na']);
+  const terms = Array.from(new Set(normalize(question).split(/\s+/)
+    .filter(t => t.length >= 3 && !stopWords.has(t)))).slice(0, 10);
+  if (terms.length === 0) return [];
+  return sources.map(source => {
+    const title = normalize(source.nome);
+    const category = normalize(source.categoria);
+    const domain = normalize(new URL(source.url).hostname);
+    const titleWords = new Set(title.split(/\s+/));
+    const catWords = new Set(category.split(/\s+/));
+    const domainWords = new Set(domain.split(/\s+/));
+    const score = terms.reduce((sum, term) => sum +
+      (titleWords.has(term) ? 5 : 0) + (catWords.has(term) ? 3 : 0) +
+      (domainWords.has(term) ? 2 : 0), 0);
+    return { source, score };
+  }).filter(x => x.score >= 2).sort((a, b) => b.score - a.score)
+    .slice(0, limit).map(x => x.source);
+}
+
+export function catalogueLeadsAsEvidence(sources: KnowledgeSource[]): string {
+  return sources.slice(0, 3).map(s =>
+    'SUGESTÃO DE DIRETÓRIO (página não lida): ' + s.nome +
+    ' — ' + s.categoria.replace(/_/g, ' ') + ' — ' + s.url
+  ).join('\n').slice(0, 900);
 }
 
 export async function searchPublicKnowledge(q: string, signal?: AbortSignal): Promise<SearchResult> {
