@@ -21,7 +21,7 @@ export function instantAnswer(text: string): InstantAnswer | null {
   if (/^(bom dia|boa tarde|boa noite)$/.test(normalized)) {
     return reply('Olá! Como posso ajudar você hoje? Posso ajudar com estudos, código e documentos locais.');
   }
-  if (/^(tudo bem|como vai|como voce esta|ta funcionando|voce funciona)$/.test(normalized)) {
+  if (/^(tudo bem|tudo bom|como vai|como voce esta|como vc ta|como voce ta|como vc esta|como c ta|como ta|ta tudo bem|vc ta bem|ta funcionando|voce funciona)$/.test(normalized)) {
     return reply('Estou disponível! Estas mensagens simples são respondidas instantaneamente pelo aplicativo. Para perguntas mais complexas, a REZ utiliza um modelo aberto no próprio dispositivo.');
   }
   if (/^(obrigado|obrigada|valeu|vlw|brigado|brigada)$/.test(normalized)) {
