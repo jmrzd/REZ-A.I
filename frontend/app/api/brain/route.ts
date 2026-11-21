@@ -1,0 +1,107 @@
+/**
+ * Same-origin Vercel bridge to the REZ Cloudflare Worker.
+ *
+ * The browser never learns the remote Worker URL or our private app-to-app
+ * authorization secret. Cloudflare AI binding does not need a model API key.
+ * Vercel Authentication MUST remain enabled; this endpoint has no app-level
+ * per-user authentication or durable rate limiting.
+ */
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
+const MAX_BODY = 24000;
+const HEADERS = { 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' };
+
+function config(): { url: string; secret: string } | null {
+  const input = process.env.REZ_BRAIN_URL?.trim();
+  const secret = process.env.REZ_BRAIN_SHARED_SECRET?.trim();
+  if (!input || !secret || secret.length < 32) return null;
+  try {
+    const url = new URL(input);
+    // Prevent SSRF: only the specific Cloudflare-hosted Worker is allowed.
+    if (url.protocol !== 'https:' || !url.hostname.endsWith('.workers.dev') ||
+        !url.hostname.includes('.') || url.username || url.password || url.search ||
+        url.hash || (url.port && url.port !== '443')) return null;
+    return { url: url.origin + '/chat', secret };
+  } catch {
+    return null;
+  }
+}
+
+function fail(status: number, error: string): Response {
+  return Response.json({ error }, { status, headers: HEADERS });
+}
+
+export async function GET(): Promise<Response> {
+  // A configured endpoint is not proof that the remote deployment is live.
+  return Response.json({
+    configured: !!config(),
+    provider: 'Cloudflare Workers AI',
+    engine: 'REZ Brain · GLM-4.7-Flash',
+  }, { headers: HEADERS });
+}
+
+export async function POST(request: Request): Promise<Response> {
+  const settings = config();
+  if (!settings) {
+    return fail(503, 'O cérebro na nuvem ainda não foi conectado. A configuração do Cloudflare Worker é necessária antes de usar a REZ no servidor.');
+  }
+  const origin = request.headers.get('origin');
+  if (origin && origin !== new URL(request.url).origin)
+    return fail(403, 'Origem não autorizada.');
+  if (Number(request.headers.get('content-length') || 0) > MAX_BODY)
+    return fail(413, 'Mensagem grande demais.');
+  let raw: string;
+  try {
+    raw = await request.text();
+    if (raw.length > MAX_BODY) return fail(413, 'Mensagem grande demais.');
+    const body: unknown = JSON.parse(raw);
+    if (!body || typeof body !== 'object' || !('messages' in body))
+      return fail(400, 'Formato inválido.');
+    const messages = (body as { messages: unknown }).messages;
+    if (!Array.isArray(messages) || messages.length < 1 || messages.length > 12 ||
+        !messages.every(m =>
+          m && typeof m === 'object' &&
+          (m.role === 'user' || m.role === 'assistant') &&
+          typeof m.content === 'string' && m.content.trim() &&
+          m.content.length <= 3000) ||
+        messages.at(-1).role !== 'user')
+      return fail(400, 'Mensagens inválidas.');
+  } catch {
+    return fail(400, 'Não foi possível interpretar a mensagem.');
+  }
+
+  let remote: Response;
+  try {
+    remote = await fetch(settings.url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'text/event-stream',
+        'Authorization': 'Bearer ' + settings.secret,
+      },
+      body: raw,
+      signal: request.signal,
+      cache: 'no-store',
+    });
+  } catch {
+    return fail(502, 'A REZ não conseguiu se conectar ao cérebro na nuvem.');
+  }
+  if (!remote.ok) {
+    // Never return provider internals or accidental sensitive error content.
+    if (remote.status === 401)
+      return fail(503, 'A autenticação interna entre Vercel e Cloudflare não está configurada corretamente.');
+    if (remote.status === 429)
+      return fail(429, 'O limite gratuito de IA na nuvem foi atingido. Tente novamente depois.');
+    return fail(503, 'O cérebro da REZ está indisponível. Verifique o Worker e a cota gratuita.');
+  }
+  if (!remote.body) return fail(502, 'O serviço não enviou uma resposta.');
+  return new Response(remote.body, {
+    status: 200,
+    headers: {
+      ...HEADERS,
+      'Content-Type': 'text/event-stream; charset=utf-8',
+      'X-Accel-Buffering': 'no',
+    },
+  });
+}
