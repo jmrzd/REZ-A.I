@@ -18,7 +18,7 @@ export type NativeMode = 'general' | 'study' | 'code' | 'summary';
 export type NativeAnswer = {
   text: string;
   topic: string;
-  method: 'guided' | 'calculation' | 'extractive' | 'fallback';
+  method: 'guided' | 'calculation' | 'extractive' | 'reference' | 'fallback';
   sources: Array<{ name: string; url: string }>;
   engine: 'REZ Native';
 };
