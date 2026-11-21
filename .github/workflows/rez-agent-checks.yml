@@ -30,6 +30,8 @@ jobs:
           node --check rez-agent-cloud/guard.mjs
       - name: Verify request limits and authentication guards
         run: node --test rez-agent-cloud/tests/*.test.mjs
+      - name: Build private agent container
+        run: docker build -t rez-ai-agent:test rez-agent-cloud
   frontend:
     runs-on: ubuntu-latest
     steps:
