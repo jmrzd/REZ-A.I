@@ -1,0 +1,45 @@
+name: REZ Advanced agent checks
+on:
+  push:
+    paths:
+      - 'rez-agent-cloud/**'
+      - 'frontend/app/api/rez-agent/**'
+      - 'frontend/tests/rez-agent-route.test.ts'
+      - 'frontend/app/page.tsx'
+      - '.github/workflows/rez-agent-checks.yml'
+  pull_request:
+    paths:
+      - 'rez-agent-cloud/**'
+      - 'frontend/app/api/rez-agent/**'
+      - 'frontend/tests/rez-agent-route.test.ts'
+      - 'frontend/app/page.tsx'
+      - '.github/workflows/rez-agent-checks.yml'
+permissions:
+  contents: read
+jobs:
+  agent-guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Check runtime syntax
+        run: |
+          node --check rez-agent-cloud/server.mjs
+          node --check rez-agent-cloud/guard.mjs
+      - name: Verify request limits and authentication guards
+        run: node --test rez-agent-cloud/tests/*.test.mjs
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install and test frontend
+        working-directory: frontend
+        run: |
+          npm install --no-audit --no-fund
+          npm test
+          npm run build
