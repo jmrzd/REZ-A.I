@@ -1,3 +1,5 @@
+> **REZ Turbo v0.4 — Groq Free, sem cartão:** modo padrão com GPT-OSS 120B da OpenAI, em servidores GroqCloud. Não exige GPU ou pesos locais. Para ativar o chat, crie a chave gratuita **GROQ_API_KEY** no Groq e adicione-a como variável segura de ambiente na Vercel (Production), depois redeploy. Não envie chaves ao ChatGPT/GitHub. [Guia de configuração](docs/REZ_GROQ_FREE.md). O plano gratuito possui cotas e a hospedagem também tem seus próprios limites.
+
 > **REZ TURBO v0.3 — modo padrão na nuvem sem pesos locais:** a REZ agora usa Nemotron 3.5 Lightning, 30B de parâmetros, por meio do Vercel AI Gateway. Modelo gratuito anunciado em novembro/2026, sujeito a limites e mudanças. Não é o ChatGPT. O histórico local fica no navegador, mas mensagens Turbo são enviadas à NVIDIA, que pode retê-las. **Consulte [a arquitetura e os avisos de privacidade](docs/REZ_TURBO.md).**
 
 > **ATUALIZAÇÃO ATIVA — REZ LOCAL v0.2 (sem API paga):**
