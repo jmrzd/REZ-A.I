@@ -17,6 +17,9 @@ test('short courtesy and help use immediate offline rules', () => {
   assert.match(instantAnswer('Bom dia')?.text || '', /ajudar/);
   assert.match(instantAnswer('Obrigado')?.text || '', /Por nada/);
   assert.match(instantAnswer('o que você faz?')?.text || '', /aplicativo de chat local/);
+  for (const prompt of ['COMO VC TA', 'como vc tá?', 'tudo bom', 'como você tá']) {
+    assert.match(instantAnswer(prompt)?.text || '', /Estou disponível/, prompt);
+  }
 });
 
 test('meaningful questions are NOT replaced with scripted canned responses', () => {
