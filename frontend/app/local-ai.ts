@@ -28,7 +28,7 @@ export type GenerateOptions = {
 
 type CpuReply = {
   id: number;
-  type: 'progress' | 'delta' | 'error' | 'done';
+  type: 'progress' | 'delta' | 'error' | 'done' | 'ready';
   text?: string;
   percent?: number;
   message?: string;
@@ -50,6 +50,7 @@ const SYSTEM = [
 let gpuInstance: { id: string; worker: Worker; engine: WebWorkerMLCEngine } | null = null;
 let cpuWorker: Worker | null = null;
 let nextId = 0;
+let preparation: Promise<void> | null = null;
 
 export function hasWebGPU(): boolean {
   return typeof navigator !== 'undefined' && !!navigator.gpu;
@@ -137,6 +138,7 @@ async function runGPU(
   signal: AbortSignal,
   progress: GenerateOptions['onProgress'],
   onDelta: GenerateOptions['onDelta'],
+  prepareOnly = false,
 ): Promise<void> {
   const { WebWorkerMLCEngine, prebuiltAppConfig } = await import('@mlc-ai/web-llm');
   if (!prebuiltAppConfig.model_list.some(m => m.model_id === modelId))
@@ -164,6 +166,10 @@ async function runGPU(
     }
   }
   if (signal.aborted) throw abortException();
+  if (prepareOnly) {
+    progress({ text: 'REZ pronta para responder usando WebGPU.', stage: 'gpu', percent: 100 });
+    return;
+  }
   const { worker, engine } = gpuInstance;
   progress({ text: 'REZ está gerando resposta no seu dispositivo...', stage: 'gpu' });
   try {
@@ -191,6 +197,7 @@ function runCPU(
   signal: AbortSignal,
   onProgress: GenerateOptions['onProgress'],
   onDelta: GenerateOptions['onDelta'],
+  prepareOnly = false,
 ): Promise<void> {
   if (signal.aborted) return Promise.reject(abortException());
   if (!cpuWorker)
@@ -234,9 +241,10 @@ function runCPU(
       } else if (item.type === 'delta') {
         if (item.text) onDelta(item.text);
       } else if (item.type === 'error') {
-        destroy();
+        // A generation error need not discard the already-loaded model.
+        // The worker remains reusable unless it crashed (handled above).
         finish(new Error(item.message || 'Erro ao gerar resposta na CPU.'));
-      } else if (item.type === 'done') {
+      } else if (item.type === 'done' || item.type === 'ready') {
         finish();
       }
     };
@@ -249,9 +257,45 @@ function runCPU(
     worker.addEventListener('error', broken);
     worker.addEventListener('messageerror', broken);
     worker.postMessage({
-      type: 'generate', id, modelId: CPU_MODEL, system, messages,
+      type: prepareOnly ? 'prepare' : 'generate', id, modelId: CPU_MODEL, system, messages,
     });
   });
+}
+
+/**
+ * User-triggered warm-up. Loads model weights into a reusable worker without
+ * generating a fake chat message. Call once per open tab, before a long query.
+ * We never silently download hundreds of MB when the page is simply opened.
+ */
+export async function prepareLocal(
+  signal: AbortSignal,
+  onProgress: GenerateOptions['onProgress'],
+): Promise<void> {
+  if (preparation) return preparation;
+  const task = (async () => {
+    if (signal.aborted) throw abortException();
+    const gpu = await gpuChoice();
+    let failedGpu = '';
+    if (gpu) {
+      try {
+        await runGPU(gpu, [], SYSTEM, signal, onProgress, () => undefined, true);
+        return;
+      } catch (error) {
+        if (signal.aborted || isAbort(error)) throw abortException();
+        failedGpu = errorMessage(error);
+      }
+    }
+    onProgress({
+      text: failedGpu
+        ? 'A GPU não iniciou (' + failedGpu.slice(0, 90) + '). Preparando a CPU...'
+        : 'Preparando REZ na CPU (o primeiro download pode ser grande)...',
+      stage: 'cpu',
+    });
+    await runCPU([], SYSTEM, signal, onProgress, () => undefined, true);
+  })();
+  preparation = task;
+  try { await task; }
+  finally { if (preparation === task) preparation = null; }
 }
 
 export async function generateLocal({
@@ -259,6 +303,13 @@ export async function generateLocal({
 }: GenerateOptions): Promise<void> {
   if (signal.aborted) throw abortException();
   if (messages.length === 0) throw new Error('Digite uma mensagem primeiro.');
+  // A user may submit a prompt while a warm-up is in flight. Wait rather
+  // than trying to drive the same worker with two concurrent requests.
+  if (preparation) {
+    try { await preparation; }
+    catch { if (signal.aborted) throw abortException(); }
+  }
+  if (signal.aborted) throw abortException();
 
   const turns = messages.slice(-6).map(m => ({
     role: m.role, content: m.content.slice(0, 1300),
