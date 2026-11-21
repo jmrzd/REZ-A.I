@@ -6,12 +6,16 @@
  * and the first download may take longer, but the quality tradeoff is better
  * for actual conversations. All inference stays in this dedicated worker.
  */
-import { pipeline, TextStreamer } from '@huggingface/transformers';
+import { pipeline, TextStreamer, env } from '@huggingface/transformers';
+// Cached model weights and WASM runtime can be reused on a later visit,
+// subject to the browser's available storage and eviction policy.
+env.useBrowserCache = true;
+env.useWasmCache = true;
 import { hasRunawayRepetition } from './quality';
 
 type Turn = { role: 'user' | 'assistant'; content: string };
 type Incoming = {
-  type: 'generate';
+  type: 'generate' | 'prepare';
   id: number;
   modelId: string;
   system: string;
@@ -31,7 +35,7 @@ function emit(value: object): void {
 
 self.onmessage = async (event: MessageEvent<Incoming>) => {
   const cmd = event.data;
-  if (cmd?.type !== 'generate') return;
+  if (!cmd || (cmd.type !== 'generate' && cmd.type !== 'prepare')) return;
   const id = cmd.id;
   const note = (text: string, percent?: number) => emit({
     type: 'progress', id, text, percent,
@@ -59,6 +63,14 @@ self.onmessage = async (event: MessageEvent<Incoming>) => {
         },
       });
       cached = { modelId: CPU_MODEL, pipeline: engine };
+    }
+
+    // Preparation loads and caches the pipeline without generating tokens.
+    // The worker stays alive so the next real message skips initialization.
+    if (cmd.type === 'prepare') {
+      note('REZ pronta para responder usando CPU.');
+      emit({ type: 'ready', id });
+      return;
     }
 
     note('Gerando resposta na CPU. O modelo maior prioriza coerência, mas pode ser lento.');
