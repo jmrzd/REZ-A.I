@@ -1,10 +1,15 @@
 /**
- * REZ LOCAL ENGINE: inference on the visitor's own GPU or CPU.
- * No inference request is sent to REZ servers or paid API providers.
- * Model weights are downloaded from the original open-weight distribution
- * on first use and cached by the browser (subject to browser storage policy).
+ * REZ INDEPENDENT ENGINE v1.
+ *
+ * 100% text generation on the visitor's device. There is no server LLM,
+ * API key, inference endpoint, registration, or per-token charge.
+ *
+ * WebGPU GPU models run in a WebLLM WebWorker.
+ * WASM CPU fallback runs in a separate Transformers.js WebWorker.
+ * The first run necessarily downloads public open-weight model assets;
+ * subsequent sessions may reuse browser caches.
  */
-import type { MLCEngine } from '@mlc-ai/web-llm';
+import type { WebWorkerMLCEngine } from '@mlc-ai/web-llm';
 
 export type ChatTurn = { role: 'user' | 'assistant'; content: string };
 export type ModelOption = {
@@ -18,45 +23,70 @@ export type ModelOption = {
 
 export const LOCAL_MODELS: ModelOption[] = [
   {
-    id: 'qwen-fast',
-    label: 'REZ Rápida · Qwen 0.5B',
+    id: 'rez-light',
+    label: 'REZ Leve · SmolLM2 360M',
+    engine: 'webgpu',
+    modelId: 'SmolLM2-360M-Instruct-q4f32_1-MLC',
+    memory: '~580 MB de VRAM',
+    description: 'Menor consumo de GPU; respostas simples.',
+  },
+  {
+    id: 'rez-fast',
+    label: 'REZ Rápida · Qwen2.5 0.5B',
     engine: 'webgpu',
     modelId: 'Qwen2.5-0.5B-Instruct-q4f16_1-MLC',
     memory: '~945 MB de VRAM',
-    description: 'Equilibrada para placas de vídeo com menos memória.',
+    description: 'Melhor equilíbrio entre rapidez e qualidade.',
   },
   {
-    id: 'qwen-balanced',
-    label: 'REZ Plus · Qwen 1.5B',
+    id: 'rez-plus',
+    label: 'REZ Plus · Qwen2.5 1.5B',
     engine: 'webgpu',
     modelId: 'Qwen2.5-1.5B-Instruct-q4f16_1-MLC',
     memory: '~1,6 GB de VRAM',
-    description: 'Melhores respostas, precisa de GPU e mais memória.',
+    description: 'Maior qualidade, exige mais GPU.',
   },
   {
-    id: 'qwen-coder',
+    id: 'rez-code',
     label: 'REZ Code · Qwen Coder 1.5B',
     engine: 'webgpu',
     modelId: 'Qwen2.5-Coder-1.5B-Instruct-q4f16_1-MLC',
     memory: '~1,6 GB de VRAM',
-    description: 'Modelo especializado em tarefas de programação.',
+    description: 'Especializada em explicações e código.',
   },
   {
-    id: 'smol-cpu',
-    label: 'REZ Básica · CPU (135M)',
+    id: 'rez-pro',
+    label: 'REZ Pro · Qwen2.5 3B',
+    engine: 'webgpu',
+    modelId: 'Qwen2.5-3B-Instruct-q4f16_1-MLC',
+    memory: '~2,4 GB de VRAM',
+    description: 'Melhor qualidade opcional, download grande.',
+  },
+  {
+    id: 'rez-max',
+    label: 'REZ Max · Qwen2.5 7B',
+    engine: 'webgpu',
+    modelId: 'Qwen2.5-7B-Instruct-q4f16_1-MLC',
+    memory: '~5 GB de VRAM',
+    description: 'Modelo grande opcional para placas fortes.',
+  },
+  {
+    id: 'rez-cpu',
+    label: 'REZ CPU · SmolLM2 135M',
     engine: 'wasm',
     modelId: 'onnx-community/SmolLM2-135M-Instruct-ONNX-GQA',
-    memory: 'Memória RAM; respostas mais simples',
-    description: 'Alternativa sem WebGPU, usando CPU via WebAssembly.',
+    memory: 'RAM; modelo pequeno',
+    description: 'Alternativa quando WebGPU não existe; qualidade limitada.',
   },
 ];
 
-const SYSTEM_PROMPT = [
-  'Você é REZ A.I, um assistente de inteligência artificial open source.',
-  'Responda preferencialmente em português do Brasil, de modo direto, correto e útil.',
-  'Se não souber um fato, informe a incerteza. Não invente dados ou alegue',
-  'acessar a internet, executar ferramentas ou consultar arquivos quando não tiver feito isso.',
-  'Ajude com programação, explicações, escrita e resolução de problemas.',
+const SYSTEM = [
+  'Você é REZ A.I, uma aplicação independente usando modelos de pesos abertos.',
+  'Responda em português brasileiro, com objetividade e precisão.',
+  'Diga quando não souber. Nunca finja ter pesquisado a internet ou executado código.',
+  'Para programação, mostre exemplos claros e completos.',
+  'Se receber trechos de documentos, use-os como referências e deixe claro quando',
+  'uma resposta não for sustentada pelo material fornecido.',
 ].join(' ');
 
 export type Progress = { text: string; percent?: number };
@@ -64,124 +94,189 @@ export type GenerateOptions = {
   modelId: string;
   messages: ChatTurn[];
   signal: AbortSignal;
+  context?: string;
   onProgress: (status: Progress) => void;
   onDelta: (text: string) => void;
 };
 
-let loadedGpu: { modelId: string; engine: MLCEngine } | null = null;
-let loadedCpu: { modelId: string; pipeline: unknown } | null = null;
+type WorkerReply = {
+  type: 'progress' | 'delta' | 'error' | 'done';
+  id: number;
+  text?: string;
+  message?: string;
+  percent?: number;
+};
+
+let gpuSession: {
+  modelId: string;
+  worker: Worker;
+  engine: WebWorkerMLCEngine;
+} | null = null;
+let cpuWorker: Worker | null = null;
+let nextRequestId = 0;
 
 export function hasWebGPU(): boolean {
-  return typeof navigator !== 'undefined' && 'gpu' in navigator && !!navigator.gpu;
+  return typeof navigator !== 'undefined' && Boolean(navigator.gpu);
 }
 
-export async function generateLocal({
-  modelId, messages, signal, onProgress, onDelta,
-}: GenerateOptions): Promise<void> {
-  const selected = LOCAL_MODELS.find(m => m.id === modelId);
-  if (!selected) throw new Error('Modelo de IA desconhecido.');
-  if (signal.aborted) throw new DOMException('Interrompido', 'AbortError');
-  if (!messages.length) throw new Error('Envie uma mensagem antes de gerar.');
-  // A short window prevents exceeding model context (usually 4K tokens);
-  // the model runtime also has its own token limit.
-  const relevant = messages.slice(-12).map(m => ({
-    role: m.role, content: m.content.slice(0, 2000),
-  }));
+function aborted(): DOMException {
+  return new DOMException('Geração interrompida.', 'AbortError');
+}
 
-  if (selected.engine === 'webgpu') {
-    if (!hasWebGPU()) {
-      throw new Error('WebGPU não está disponível neste navegador. Selecione REZ Básica · CPU.');
-    }
-    if (!loadedGpu || loadedGpu.modelId !== selected.id) {
-      onProgress({ text: 'Preparando o modelo. Na primeira utilização os pesos serão baixados...' });
-      const { CreateMLCEngine, prebuiltAppConfig } = await import('@mlc-ai/web-llm');
-      if (!prebuiltAppConfig.model_list.some(m => m.model_id === selected.modelId)) {
-        throw new Error('Este modelo não está disponível nesta versão do motor WebLLM.');
-      }
-      if (loadedGpu) {
-        await loadedGpu.engine.unload();
-        loadedGpu = null;
-      }
-      const engine = await CreateMLCEngine(selected.modelId, {
-        initProgressCallback: progress => {
-          onProgress({
-            text: progress.text || 'Baixando e carregando modelo local...',
-            percent: typeof progress.progress === 'number'
-              ? Math.min(100, Math.max(0, Math.round(progress.progress * 100)))
-              : undefined,
-          });
-        },
-      });
-      loadedGpu = { modelId: selected.id, engine };
-    }
-    if (signal.aborted) throw new DOMException('Interrompido', 'AbortError');
-    const engine = loadedGpu.engine;
-    const onAbort = () => { void engine.interruptGenerate(); };
-    signal.addEventListener('abort', onAbort, { once: true });
-    try {
-      onProgress({ text: 'Gerando resposta no seu dispositivo...' });
-      const completion = await engine.chat.completions.create({
-        messages: [{ role: 'system', content: SYSTEM_PROMPT }, ...relevant],
-        stream: true,
-        temperature: 0.6,
-        max_tokens: 480,
-      });
-      for await (const chunk of completion) {
-        if (signal.aborted) throw new DOMException('Interrompido', 'AbortError');
-        const fragment = chunk.choices[0]?.delta?.content;
-        if (typeof fragment === 'string' && fragment) onDelta(fragment);
-      }
-    } finally {
-      signal.removeEventListener('abort', onAbort);
-    }
-    return;
-  }
+function withAbort<T>(promise: Promise<T>, signal: AbortSignal, stop: () => void): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    if (signal.aborted) { stop(); reject(aborted()); return; }
+    const abort = () => { stop(); reject(aborted()); };
+    signal.addEventListener('abort', abort, { once: true });
+    promise.then(
+      result => { signal.removeEventListener('abort', abort); resolve(result); },
+      error => { signal.removeEventListener('abort', abort); reject(error); },
+    );
+  });
+}
 
-  // Free CPU fallback for browsers without WebGPU. Smaller model = lower quality.
-  onProgress({ text: 'Preparando modelo CPU. O primeiro download pode demorar...' });
-  const transformers = await import('@huggingface/transformers');
-  if (!loadedCpu || loadedCpu.modelId !== selected.id) {
-    const pipe = await transformers.pipeline('text-generation', selected.modelId, {
-      device: 'wasm',
-      dtype: 'q4',
-      progress_callback: info => {
-        const event = info as { status?: string; progress?: number; file?: string };
+async function generateGPU(
+  model: ModelOption,
+  turns: ChatTurn[],
+  system: string,
+  signal: AbortSignal,
+  onProgress: GenerateOptions['onProgress'],
+  onDelta: GenerateOptions['onDelta'],
+): Promise<void> {
+  if (!hasWebGPU())
+    throw new Error('WebGPU não está disponível neste navegador. Selecione REZ CPU.');
+
+  const { WebWorkerMLCEngine, prebuiltAppConfig } = await import('@mlc-ai/web-llm');
+  if (!prebuiltAppConfig.model_list.some(m => m.model_id === model.modelId))
+    throw new Error('Esse modelo não está no catálogo instalado do WebLLM. Experimente outro.');
+
+  if (!gpuSession || gpuSession.modelId !== model.id) {
+    if (gpuSession) {
+      gpuSession.worker.terminate(); // Dispose old GPU model before loading another.
+      gpuSession = null;
+    }
+    onProgress({ text: 'Preparando os arquivos do modelo no navegador (primeiro download pode demorar)...' });
+    const worker = new Worker(new URL('./webllm.worker.ts', import.meta.url), { type: 'module' });
+    const engine = new WebWorkerMLCEngine(worker, {
+      initProgressCallback: info => {
         onProgress({
-          text: event.status === 'progress'
-            ? 'Baixando modelo CPU: ' + (event.file || 'arquivos...')
-            : 'Carregando modelo CPU...',
-          percent: typeof event.progress === 'number'
-            ? Math.round(Math.max(0, Math.min(100, event.progress))) : undefined,
+          text: info.text || 'Baixando/carregando modelo local...',
+          percent: typeof info.progress === 'number'
+            ? Math.round(Math.max(0, Math.min(100, info.progress * 100)))
+            : undefined,
         });
       },
     });
-    loadedCpu = { modelId: selected.id, pipeline: pipe };
+    gpuSession = { modelId: model.id, worker, engine };
+
+    try {
+      await withAbort(engine.reload(model.modelId), signal, () => {
+        worker.terminate();
+        if (gpuSession?.worker === worker) gpuSession = null;
+      });
+    } catch (error) {
+      worker.terminate();
+      if (gpuSession?.worker === worker) gpuSession = null;
+      throw error;
+    }
   }
-  if (signal.aborted) throw new DOMException('Interrompido', 'AbortError');
-  onProgress({ text: 'Gerando resposta na CPU; pode ser mais lento...' });
-  const pipe = loadedCpu.pipeline as Awaited<ReturnType<typeof transformers.pipeline<'text-generation'>>>;
-  let streamed = false;
-  const streamer = new transformers.TextStreamer(pipe.tokenizer, {
-    skip_prompt: true, skip_special_tokens: true,
-    callback_function: (fragment: string) => {
-      if (signal.aborted) return;
-      streamed = true;
-      onDelta(fragment);
-    },
+
+  if (signal.aborted) throw aborted();
+  const current = gpuSession.engine;
+  const interrupt = () => { void current.interruptGenerate(); };
+  signal.addEventListener('abort', interrupt, { once: true });
+  try {
+    onProgress({ text: 'Gerando com a GPU do seu dispositivo...' });
+    const stream = await current.chat.completions.create({
+      messages: [{ role: 'system', content: system }, ...turns],
+      stream: true,
+      temperature: 0.6,
+      max_tokens: 640,
+    });
+    for await (const chunk of stream) {
+      if (signal.aborted) throw aborted();
+      const part = chunk.choices[0]?.delta?.content;
+      if (typeof part === 'string' && part) onDelta(part);
+    }
+  } finally {
+    signal.removeEventListener('abort', interrupt);
+  }
+}
+
+function generateCPU(
+  model: ModelOption,
+  turns: ChatTurn[],
+  system: string,
+  signal: AbortSignal,
+  onProgress: GenerateOptions['onProgress'],
+  onDelta: GenerateOptions['onDelta'],
+): Promise<void> {
+  if (!cpuWorker)
+    cpuWorker = new Worker(new URL('./cpu.worker.ts', import.meta.url), { type: 'module' });
+  const worker = cpuWorker;
+  const id = ++nextRequestId;
+  return new Promise<void>((resolve, reject) => {
+    if (signal.aborted) { reject(aborted()); return; }
+
+    const cleanup = () => {
+      signal.removeEventListener('abort', onAbort);
+      worker.removeEventListener('message', onMessage);
+      worker.removeEventListener('error', onWorkerError);
+    };
+    const onAbort = () => {
+      cleanup();
+      // Terminating the worker stops CPU inference immediately. Cached model
+      // downloads remain in the browser even though this runtime is reset.
+      worker.terminate();
+      if (cpuWorker === worker) cpuWorker = null;
+      reject(aborted());
+    };
+    const onWorkerError = () => {
+      cleanup();
+      worker.terminate();
+      if (cpuWorker === worker) cpuWorker = null;
+      reject(new Error('O motor CPU parou inesperadamente. Reinicie a conversa.'));
+    };
+    const onMessage = (event: MessageEvent<WorkerReply>) => {
+      const value = event.data;
+      if (value.id !== id) return;
+      if (value.type === 'progress') {
+        onProgress({ text: value.text || 'Preparando modelo CPU...', percent: value.percent });
+      } else if (value.type === 'delta') {
+        if (value.text) onDelta(value.text);
+      } else if (value.type === 'error') {
+        cleanup();
+        reject(new Error(value.message || 'Falha no modelo CPU.'));
+      } else if (value.type === 'done') {
+        cleanup();
+        resolve();
+      }
+    };
+    signal.addEventListener('abort', onAbort, { once: true });
+    worker.addEventListener('message', onMessage);
+    worker.addEventListener('error', onWorkerError);
+    worker.postMessage({ type: 'generate', id, modelId: model.modelId, messages: turns, system });
   });
-  // WASM generation may occupy the main thread. The stop button is best-effort;
-  // a worker-based CPU runtime will be implemented in a later phase.
-  const output = await pipe(
-    [{ role: 'system', content: SYSTEM_PROMPT }, ...relevant],
-    { max_new_tokens: 192, do_sample: false, streamer, return_full_text: false },
-  );
-  if (signal.aborted) throw new DOMException('Interrompido', 'AbortError');
-  if (!streamed) {
-    const result = Array.isArray(output) ? output[0] : output;
-    const answer = result?.generated_text;
-    const content = typeof answer === 'string'
-      ? answer
-      : Array.isArray(answer) ? answer.at(-1)?.content : null;
-    if (typeof content === 'string') onDelta(content);
+}
+
+export async function generateLocal({
+  modelId, messages, signal, context = '', onProgress, onDelta,
+}: GenerateOptions): Promise<void> {
+  const model = LOCAL_MODELS.find(m => m.id === modelId);
+  if (!model) throw new Error('Modelo de IA local não encontrado.');
+  if (signal.aborted) throw aborted();
+  if (!messages.length) throw new Error('Envie uma mensagem antes de gerar.');
+
+  // Cap the model context to ~4k tokens. Large sources are selected and
+  // truncated by the client-side retrieval system, not uploaded to a server.
+  const recent = messages.slice(-8).map(m => ({
+    role: m.role, content: m.content.slice(0, 1400),
+  }));
+  const safeContext = context.trim().slice(0, 3500);
+  const system = safeContext ? SYSTEM + '\n\nCONTEXTO LOCAL:\n' + safeContext : SYSTEM;
+  if (model.engine === 'webgpu') {
+    await generateGPU(model, recent, system, signal, onProgress, onDelta);
+  } else {
+    await generateCPU(model, recent, system, signal, onProgress, onDelta);
   }
 }
