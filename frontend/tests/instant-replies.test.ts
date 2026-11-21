@@ -33,7 +33,7 @@ test('one REZ assistant displayed, no picker for external model brands', () => {
   assert.equal(page.includes('<select aria-label="Modelo de IA local"'), false);
   assert.equal(page.includes('LOCAL_MODELS.map'), false);
   assert.equal(page.includes("instantAnswer(content)"), true);
-  assert.match(page, /REZ A\.I <span>Automática<\/span>/);
+  assert.match(page, /REZ A\.I <span>\{chatMode === 'cloud'/);
   assert.equal(existsSync(join(process.cwd(), 'app', 'api', 'chat', 'turbo', 'route.ts')), false);
 });
 
