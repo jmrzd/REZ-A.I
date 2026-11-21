@@ -38,7 +38,7 @@ test('SSE parser accepts OpenAI delta, Cloudflare cumulative and DONE', () => {
   assert.equal(parseBrainEvent('event: chunk\ndata: {"choices":[{"delta":{"content":"Oi"}}]}').delta, 'Oi');
   assert.deepEqual(parseBrainEvent('data: {"response":"Resposta"}'),
     { delta: 'Resposta', cumulative: true });
-  assert.equal(parseBrainEvent(': keepalive'), undefined === parseBrainEvent(': keepalive').delta ? {}.delta : 'wrong');
+  assert.deepEqual(parseBrainEvent(': keepalive'), {});
 });
 
 test('SSE generation reassembles multibyte UTF-8 chunks and does not duplicate cumulative final response', async () => {
