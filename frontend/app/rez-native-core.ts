@@ -8,6 +8,7 @@
  * This is NOT an LLM and must not claim open-ended generative capability.
  */
 import sourceCatalog from '../public/rez-knowledge-catalog.json';
+import { pythonSnippet, explainPythonSnippet } from './rez-native-python';
 import {
   taskManager, calculator, recursionExample, listFunctionsExample,
   sqlExample, pandasExample, jsExample, htmlExample, returnExample,
@@ -166,6 +167,12 @@ export function nativeAnswer(history: NativeTurn[], mode: NativeMode = 'general'
   const q = normalize(query);
   const previous = history.slice(0, -1).filter(x => x.role === 'user')
     .slice(-6).map(x => normalize(x.content)).join(' ');
+
+  // Concrete programming requests take priority over generic answers.
+  // "Me manda um código em Python que imprima OI" should always yield
+  // print("OI"), not a link-directory fallback.
+  const snippet = pythonSnippet(query);
+  if (snippet) return answer(explainPythonSnippet(snippet), 'python', query);
 
   const calc = calculate(query);
   if (calc !== null) return answer(calc, 'matemática', query, 'calculation');
