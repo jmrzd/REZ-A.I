@@ -6,7 +6,7 @@
 
 Fonte: https://github.com/deepseek-ai/deepseek-harness (licença MIT, versão revisada `0.2.2-rc.5`, ramo `master`).
 
-O **DeepSeek Harness (`dsh`)** é um **ambiente de agentes**, com interface Web, plugins, gerenciamento de sessões e ferramentas para trabalhar em repositórios. **Ele não é o modelo DeepSeek** e **não possui capacidade de inferência de LLM sem conexão com algum modelo**. A interface padrão pede credencial de um provedor DeepSeek; pode usar um endpoint compatível auto-hospedado se existir computação para executar o modelo. A biblioteca é experimental, com aviso explícito de **ausência de auditoria de segurança**.
+O **DeepSeek Harness (`dsh`)** é um **ambiente de agentes**, com interface Web, plugins, gerenciamento de sessões e ferramentas para trabalhar em repositórios. **Ele não é o modelo DeepSeek** e **não possui capacidade de inferência de LLM sem conexão com algum modelo**. O Web UI permite configurar uma chave da API DeepSeek, **ou usar o provedor `deepseek-account` por login da conta quando disponível**, sujeito à elegibilidade, saldo e cotas. Também aceita um endpoint compatível auto-hospedado se houver computação para rodar o modelo. Login sem chave de API **não garante mensagens gratuitas ou ilimitadas**. A biblioteca é experimental, com aviso explícito de **ausência de auditoria de segurança**.
 
 ## Arquivos preparados
 
