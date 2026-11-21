@@ -93,9 +93,10 @@ export default function NetworkKnowledgePanel({
       <label className="networkConsent">
         <input type="checkbox" checked={useSearchForChat}
           onChange={e => onSearchToggle(e.target.checked)} />
-        <span>Consultar Wikipédia e Crossref antes das respostas da REZ na nuvem.
-          A pergunta será enviada aos serviços públicos. Desativado por padrão;
-          pesquisar pode adicionar alguns segundos.</span>
+        <span>Permitir pesquisa externa: a REZ Native consulta a Wikipédia quando não souber responder;
+          o modo Cloudflare consulta referências na Wikipédia e no Crossref.
+          Somente a pergunta é enviada aos serviços públicos, nunca os documentos locais.
+          Desativado por padrão. A pesquisa pode acrescentar alguns segundos.</span>
       </label>
       <div className="networkImport">
         <span><strong>{indexed.length} fontes</strong> · {new Set(indexed.map(s => s.categoria)).size} áreas · {feeds.length} feeds · {catalog.length ? 'catálogo personalizado' : 'base do projeto'}</span>
