@@ -69,3 +69,38 @@
 .groqSetup strong{color:#f4e7ff}
 .groqSetup a{color:#d6b4ff;text-decoration:underline;text-underline-offset:2px}
 .groqSetup code{background:#382449;color:#f0ddff;border-radius:4px;padding:1px 4px;white-space:nowrap}
+
+
+/* REZ Sovereign: client-side document memory, no API keys */
+.hiddenInput{display:none}
+.historyExport{font-size:11px;background:transparent;border:1px solid #393044;border-radius:8px;color:#bdaae3;padding:9px 11px;text-align:left;margin-top:4px}
+.historyExport:hover:not(:disabled){background:#281e3e}
+.historyExport:disabled{opacity:.35;cursor:not-allowed}
+.knowledgePanel{padding:15px 22px 14px;border-bottom:1px solid #352842;background:#130f1c;color:#ded7e8;max-height:35dvh;overflow:auto;flex-shrink:0}
+.knowledgeHeader{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.knowledgeHeader>div{flex:1;min-width:0}
+.knowledgeHeader strong{display:flex;align-items:center;gap:9px;font-size:13px;color:#eee3fb}
+.knowledgeHeader strong svg{color:#b195f5}
+.knowledgeHeader p{font-size:12px;line-height:1.5;color:#9f93af;margin:6px 0}
+.knowledgeAdd{display:flex;align-items:center;justify-content:center;gap:7px;white-space:nowrap;padding:8px 10px;font-size:11px;border:1px solid #624886;color:#eee3ff;border-radius:9px;background:#332448}
+.knowledgeAdd:hover{background:#45315e}
+.knowledgeClose{background:transparent;border:0;color:#aa93c8;padding:6px}
+.knowledgeMeta{font-size:11px;color:#9386a2;margin:6px 0 10px}
+.knowledgeFiles{display:flex;flex-wrap:wrap;gap:8px}
+.knowledgeFile{display:flex;align-items:center;gap:7px;border:1px solid #372b43;background:#1b1524;color:#ddd0eb;border-radius:8px;padding:7px 9px;font-size:11px;max-width:260px}
+.knowledgeFile>svg{flex-shrink:0;color:#b89bee}
+.knowledgeFile>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.knowledgeFile>button{background:transparent;border:0;color:#9184a2;display:flex;padding:2px}
+.knowledgeFile>button:hover{color:#f4a5be}
+.knowledgeEmpty{color:#9c8daf;font-size:12px}
+.knowledgeSources{text-align:center;font-size:11px;color:#9c88b4;margin:16px}
+@media(max-width:720px){
+ .knowledgePanel{padding:12px 14px;max-height:42dvh}
+ .knowledgeHeader{flex-wrap:wrap}
+ .knowledgeAdd{order:2}
+ .knowledgeClose{order:1}
+ .knowledgeHeader>div{width:100%;flex-basis:100%}
+ .headerControls{gap:6px}
+ .headerControls select{max-width:165px;min-width:110px}
+ .headerControls .permissionsToggle{padding:8px}
+}
