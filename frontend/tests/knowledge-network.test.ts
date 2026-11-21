@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
   INITIAL_SOURCES, validPublicUrl, parseSourceCatalog, findSources,
-  sourcesAsPromptContext, getBundledCatalog,
+  sourcesAsPromptContext, getBundledCatalog, rankCatalogSources, catalogueLeadsAsEvidence,
 } from '../app/knowledge-web';
 import { buildCloudMessages } from '../app/cloud-ai';
 import { GET } from '../app/api/knowledge/search/route';
@@ -143,4 +143,19 @@ test('training pipeline uses source metadata and unanswered prompts, not LLM ans
   assert.match(setup, /labelled_question_answer_pairs/);
   assert.match(trainer, /LogisticRegression/);
   assert.match(trainer, /NOT the LLM/);
+});
+
+
+test('catalog relevant links can reach REZ without pretending the site content was ingested', () => {
+  const published = JSON.parse(readFileSync(join(process.cwd(), 'public', 'rez-knowledge-catalog.json'), 'utf8'));
+  const links = rankCatalogSources(published.fontes, 'Quero aprender Python', 3);
+  assert.ok(links.length > 0);
+  assert.ok(links.some(x => /python/i.test(x.nome) || /python/i.test(x.url)));
+  const text = catalogueLeadsAsEvidence(links);
+  assert.match(text, /SUGESTÃO DE DIRETÓRIO/);
+  assert.match(text, /página não lida/);
+  const page = readFileSync(join(process.cwd(), 'app', 'page.tsx'), 'utf8');
+  assert.match(page, /const directory = await getBundledCatalog\(controller\.signal\)/);
+  assert.match(page, /let citations: PublicHit\[\] = \[\]/);
+  assert.match(page, /if \(searchWebForAnswers\)/);
 });
