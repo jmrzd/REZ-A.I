@@ -150,9 +150,12 @@ export function parseSourceCatalog(input: unknown): KnowledgeSource[] {
  */
 export type FeedEntry = { categoria: string; nome: string; feed: string; idioma: string };
 
+let bundledCatalogCache: { sources: KnowledgeSource[]; feeds: FeedEntry[] } | null = null;
+
 export async function getBundledCatalog(signal?: AbortSignal): Promise<{
   sources: KnowledgeSource[]; feeds: FeedEntry[];
 }> {
+  if (bundledCatalogCache) return bundledCatalogCache;
   const response = await fetch('/rez-knowledge-catalog.json', {
     cache: 'force-cache', signal,
   });
@@ -172,7 +175,8 @@ export async function getBundledCatalog(signal?: AbortSignal): Promise<{
       idioma: String(x.idioma || 'mul').slice(0, 8),
     }];
   });
-  return { sources, feeds };
+  bundledCatalogCache = { sources, feeds };
+  return bundledCatalogCache;
 }
 
 export function readImportedSources(): KnowledgeSource[] {
