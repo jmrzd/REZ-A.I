@@ -120,3 +120,13 @@
 .warmButton:disabled{opacity:.75;cursor:default}
 .warmButton svg{color:#bb94f8}
 @media(max-width:790px){.warmButton span{display:none}}
+
+
+/* REZ Cloud is a real hosted inference mode, never downloads weights locally. */
+.rezModeSwitch{display:flex;gap:3px;padding:3px;background:#16111e;border:1px solid #40314e;border-radius:12px;white-space:nowrap}
+.rezModeSwitch button{color:#998caa;border:0;background:transparent;border-radius:9px;padding:7px 10px;font-size:12px;font-weight:600}
+.rezModeSwitch button.selected{background:#563780;color:#f6eaff}
+.rezModeSwitch button:not(:disabled):hover{color:#f1ddff}
+.rezModeSwitch button:disabled{opacity:.4;cursor:not-allowed}
+@media(max-width:920px){.rezModeSwitch button{padding:6px 8px;font-size:11px}}
+@media(max-width:640px){.rezModeSwitch{gap:2px}.rezModeSwitch button{font-size:10px;padding:6px}.rezAutoLabel{display:none}}
