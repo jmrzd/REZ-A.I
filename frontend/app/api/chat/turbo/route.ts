@@ -9,6 +9,8 @@
  * Keep Vercel Authentication enabled: no application-level per-user rate
  * limiting exists yet. This route never falls back to a paid model.
  */
+import { getVercelOidcToken } from '@vercel/oidc';
+
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
@@ -92,12 +94,20 @@ export async function POST(request: Request): Promise<Response> {
     return errorJson(400, 'Não foi possível interpretar a mensagem.');
   }
 
-  // OIDC is injected automatically into Vercel deployments; an explicitly
-  // configured Gateway key is only for development outside Vercel.
-  const credential = process.env.VERCEL_OIDC_TOKEN || process.env.AI_GATEWAY_API_KEY;
+  // In Vercel Functions the OIDC token lives in the REQUEST CONTEXT,
+  // not necessarily in process.env. The official helper reads the rotating
+  // platform token safely. Never trust a client-supplied token/header here.
+  let credential: string | undefined = process.env.AI_GATEWAY_API_KEY;
   if (!credential) {
-    console.warn('REZ Turbo: missing server OIDC or AI Gateway credential.');
-    return errorJson(503, 'O servidor não recebeu a autenticação OIDC da Vercel. Verifique a configuração do AI Gateway do projeto.');
+    try {
+      credential = await getVercelOidcToken();
+    } catch {
+      console.warn('REZ Turbo: official Vercel OIDC helper unavailable in runtime.');
+    }
+  }
+  if (!credential) {
+    console.warn('REZ Turbo: server OIDC missing. Enable OIDC for this Vercel project.');
+    return errorJson(503, 'A autenticação OIDC do projeto não está disponível na função. Verifique Settings → Security → OIDC no painel da Vercel.');
   }
 
   let upstream: Response;
