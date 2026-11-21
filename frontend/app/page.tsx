@@ -7,26 +7,34 @@ import {
   ShieldCheck, Files, Upload, FileText, HardDrive, ChevronDown,
 } from 'lucide-react';
 import ToolApprovalDemo from './ToolApprovalDemo';
-import { generateLocal, hasWebGPU, LOCAL_MODELS, type ChatTurn, type Progress } from './local-ai';
+import { generateLocal, hasWebGPU, type ChatTurn, type Progress } from './local-ai';
+import { instantAnswer } from './instant-replies';
 import {
   buildLocalContext, readDocuments, removeDocument, saveDocument,
   type LocalDocument, MAX_DOC_BYTES, MAX_DOCS,
 } from './knowledge';
 
-type Conversation = { id: string; title: string; messages: ChatTurn[]; sources?: string[] };
+type RezMessage = ChatTurn & { source?: 'instant' | 'model' };
+type Conversation = { id: string; title: string; messages: RezMessage[]; sources?: string[] };
 
 const HISTORY_KEY = 'rez-ai-conversations-v1';
 
 function friendlyError(error: unknown): string {
-  if (!(error instanceof Error)) return 'Falha desconhecida ao iniciar a IA local.';
-  const message = error.message.toLowerCase();
+  // WebLLM sometimes rejects with a STRING rather than an Error object.
+  // Do not hide it behind the old "Falha desconhecida" message.
+  const raw = error instanceof Error ? error.message
+    : typeof error === 'string' ? error
+    : error && typeof error === 'object' && 'message' in error
+      ? String(error.message) : String(error ?? '');
+  const message = raw.toLowerCase();
   if (message.includes('out of memory') || message.includes('memory allocation') ||
-      message.includes('allocation failed') || message.includes('not enough memory')) {
-    return 'Memória insuficiente para este modelo. Selecione REZ Leve ou REZ CPU.';
-  }
+      message.includes('allocation failed') || message.includes('not enough memory'))
+    return 'O dispositivo não tem RAM/VRAM suficiente para iniciar a IA local. Feche outras abas ou use um computador com mais memória.';
   if (message.includes('network') || message.includes('failed to fetch'))
-    return 'Falha ao baixar os pesos do modelo. Confira a conexão e tente novamente.';
-  return error.message;
+    return 'Não foi possível baixar os pesos públicos do modelo. Verifique a conexão e os bloqueadores do navegador.';
+  if (message.includes('webgpu') || message.includes('gpu'))
+    return raw.slice(0, 400) + ' Confira a disponibilidade da WebGPU; a REZ também tenta CPU automaticamente.';
+  return raw.trim() ? raw.slice(0, 450) : 'O motor local não iniciou. Verifique WebGPU, armazenamento e RAM do navegador.';
 }
 
 export default function Home() {
@@ -34,7 +42,6 @@ export default function Home() {
   const [active, setActive] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
   const [draft, setDraft] = useState('');
-  const [modelId, setModelId] = useState('rez-fast');
   const [hasGpu, setHasGpu] = useState<boolean | null>(null);
   const [documents, setDocuments] = useState<LocalDocument[]>([]);
   const [docsOpen, setDocsOpen] = useState(false);
@@ -67,7 +74,6 @@ export default function Home() {
     }
     const supported = hasWebGPU();
     setHasGpu(supported);
-    if (!supported) setModelId('rez-cpu');
     void readDocuments().then(setDocuments).catch(() => {
       setError('Não foi possível acessar a memória de documentos do navegador.');
     });
@@ -89,7 +95,6 @@ export default function Home() {
 
   const current = chats.find(c => c.id === active);
   const messages = current?.messages ?? [];
-  const selectedModel = LOCAL_MODELS.find(m => m.id === modelId) ?? LOCAL_MODELS[0];
 
   function newChat() {
     if (busy) return;
@@ -182,22 +187,31 @@ export default function Home() {
     setCopied(null);
 
     let reply = '';
+    let replySource: 'instant' | 'model' = 'model';
     const showReply = () => setChats(previous => previous.map(chat => chat.id === id
-      ? { ...chat, messages: reply ? [...next, { role: 'assistant', content: reply }] : next }
+      ? { ...chat, messages: reply ? [...next, { role: 'assistant', content: reply, source: replySource }] : next }
       : chat));
 
     try {
-      await generateLocal({
-        modelId, messages: next, context: retrieval.context,
-        signal: controller.signal,
-        onProgress: setProgress,
-        onDelta: text => {
-          reply += text;
-          showReply();
-        },
-      });
-      if (!reply.trim())
-        throw Error('O modelo não gerou texto. Experimente REZ Rápida ou REZ CPU.');
+      const instant = instantAnswer(content);
+      if (instant) {
+        // Explicitly labeled deterministic response: zero model download.
+        replySource = 'instant';
+        reply = instant.text;
+        showReply();
+      } else {
+        await generateLocal({
+          messages: next, context: retrieval.context,
+          signal: controller.signal,
+          onProgress: setProgress,
+          onDelta: text => {
+            reply += text;
+            showReply();
+          },
+        });
+        if (!reply.trim())
+          throw Error('Nenhum texto foi gerado. Confira RAM, GPU e o download dos pesos.');
+      }
     } catch (err) {
       setError(controller.signal.aborted ? 'Resposta interrompida.' : friendlyError(err));
     } finally {
@@ -259,20 +273,14 @@ export default function Home() {
               aria-expanded={showPermissions}>
               <ShieldCheck size={16} /> <span>Permissões</span>
             </button>
-            <select aria-label="Modelo de IA local" value={modelId} disabled={busy}
-              onChange={e => { setModelId(e.target.value); setError(''); setProgress(null); }}>
-              {LOCAL_MODELS.map(model => (
-                <option key={model.id} value={model.id}>{model.label}</option>
-              ))}
-            </select>
+            <span className="rezAutoLabel"><BrainCircuit size={16} /> REZ A.I <span>Automática</span></span>
           </div>
         </header>
         {showPermissions && <ToolApprovalDemo onClose={() => setShowPermissions(false)} />}
         <div className="modelNotice" role="status">
           <Cpu size={16} />
-          <span><strong>{selectedModel.label}</strong> · {selectedModel.memory}. {selectedModel.description}
-            {hasGpu === false && selectedModel.engine === 'webgpu' &&
-              ' WebGPU indisponível; escolha REZ CPU.'}
+          <span><strong>REZ A.I · Modo automático.</strong> Saudações respondem imediatamente. Para perguntas abertas, a REZ carrega um modelo aberto no dispositivo e tenta CPU se a GPU falhar.
+            {hasGpu === false && ' Este navegador não detectou WebGPU: perguntas abertas usarão CPU e podem demorar.'}
           </span>
         </div>
 
@@ -314,7 +322,7 @@ export default function Home() {
               <div className="orb"><BrainCircuit size={36} /></div>
               <div className="eyebrow"><Sparkles size={13} /> IA INDEPENDENTE · SEM CHAVES DE API</div>
               <h1>O que vamos criar <em>hoje?</em></h1>
-              <p>Modelos abertos funcionando no seu computador. Converse, programe e consulte sua memória de documentos, sem enviar perguntas à nuvem. O primeiro uso exige baixar os pesos do modelo.</p>
+              <p>Uma única REZ A.I para conversar, aprender programação e consultar documentos locais. Saudações são instantâneas; perguntas abertas usam um modelo de IA no seu dispositivo e podem exigir download inicial.</p>
               <div className="chips">
                 <button onClick={() => setDraft('Me ajude a criar um projeto em Python')}>Criar com Python ↗</button>
                 <button onClick={() => setDraft('Explique como modelos de linguagem funcionam')}>Aprender IA ↗</button>
@@ -328,6 +336,8 @@ export default function Home() {
                     ? <Bot size={18} /> : <UserRound size={18} />}</div>
                   <div className="messageContent">
                     <div className="bubble">{message.content}</div>
+                    {message.role === 'assistant' && message.source === 'instant' &&
+                      <span className="quickReplyNote">Resposta rápida do aplicativo · sem geração por modelo</span>}
                     {message.role === 'assistant' && (
                       <button type="button" className="copyMessage"
                         onClick={() => void copyMessage(index, message.content)}
@@ -371,7 +381,7 @@ export default function Home() {
               aria-label="Parar geração"><StopCircle size={20} /></button>
             : <button disabled={!draft.trim()} aria-label="Enviar mensagem"><Send size={19} /></button>}
         </form>
-        <footer>IA local sem API. Arquivos e conversas ficam no navegador. Pesos públicos são baixados na primeira utilização.</footer>
+        <footer>Sem chave/API de inferência. Respostas rápidas são pré-programadas; IA generativa exige pesos públicos, RAM/CPU/GPU e download inicial.</footer>
       </section>
     </main>
   );
