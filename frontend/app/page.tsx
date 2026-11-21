@@ -117,19 +117,41 @@ export default function Home() {
         if (!res.body) throw Error('Streaming não disponível neste navegador.');
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
-        let firstText = true;
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          const text = decoder.decode(value, { stream: true });
-          if (text) {
-            if (firstText) { setProgress(null); firstText = false; }
-            reply += text;
+        let buffer = '';
+        let completed = false;
+        const consumeFrame = (raw: string) => {
+          const line = raw.split('\n').find(l => l.startsWith('data:'));
+          if (!line) return;
+          const message = JSON.parse(line.slice(5).trim()) as {
+            type?: string; content?: string; message?: string;
+          };
+          if (message.type === 'error')
+            throw Error(message.message || 'Falha no provedor gratuito.');
+          if (message.type === 'done') { completed = true; return; }
+          if (message.type === 'delta' && typeof message.content === 'string') {
+            setProgress(null);
+            reply += message.content;
             showReply();
           }
+        };
+        try {
+          while (!completed) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true }).replace(/\r\n/g, '\n');
+            let boundary = buffer.indexOf('\n\n');
+            while (boundary !== -1) {
+              consumeFrame(buffer.slice(0, boundary));
+              buffer = buffer.slice(boundary + 2);
+              boundary = buffer.indexOf('\n\n');
+            }
+          }
+          buffer += decoder.decode();
+          if (buffer.trim() && !completed) consumeFrame(buffer);
+        } finally {
+          await reader.cancel().catch(() => undefined);
         }
-        const remainder = decoder.decode();
-        if (remainder) { reply += remainder; showReply(); }
+        if (!completed) throw Error('A conexão com a IA foi interrompida antes de terminar.');
       } else {
         await generateLocal({
           modelId, messages: next,
