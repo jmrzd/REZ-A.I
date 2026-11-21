@@ -21,6 +21,7 @@ type RezMessage = ChatTurn & { source?: 'instant' | 'model' | 'native' };
 type Conversation = { id: string; title: string; messages: RezMessage[]; sources?: string[]; webSources?: PublicHit[] };
 
 const HISTORY_KEY = 'rez-ai-conversations-v1';
+const AGENT_PREVIEW = process.env.NEXT_PUBLIC_REZ_AGENT_PREVIEW === 'true';
 
 function friendlyError(error: unknown): string {
   // WebLLM sometimes rejects with a STRING rather than an Error object.
@@ -47,8 +48,9 @@ export default function Home() {
   const [draft, setDraft] = useState('');
   const [hasGpu, setHasGpu] = useState<boolean | null>(null);
   // Native works on the Vercel server without a Cloudflare account or model API.
-  const [chatMode, setChatMode] = useState<'native' | 'cloud' | 'local'>('native');
+  const [chatMode, setChatMode] = useState<'native' | 'cloud' | 'local' | 'agent'>('native');
   const [assistantMode, setAssistantMode] = useState<AssistMode>('general');
+  const [agentAdminKey, setAgentAdminKey] = useState(''); // Memory-only; never store in chat/history.
   // Explicit consent: do not send document excerpts to the Cloudflare model by default.
   const [sendDocsToCloud, setSendDocsToCloud] = useState(false);
   const [cloudConfigured, setCloudConfigured] = useState<boolean | null>(null);
@@ -250,6 +252,8 @@ export default function Home() {
       ? 'REZ Native: analisando sua pergunta com o nosso motor de conhecimento...'
       : chatMode === 'cloud'
         ? 'Consultando o modelo hospedado na Cloudflare...'
+        : chatMode === 'agent'
+          ? 'REZ Avançado: processando na nuvem privada...'
         : 'Preparando o modelo no seu dispositivo (primeiro download pode demorar)...' });
     setError('');
     setCopied(null);
@@ -272,7 +276,7 @@ export default function Home() {
     };
 
     try {
-      const instant = instantAnswer(content, new Date(), chatMode);
+      const instant = chatMode === 'agent' ? null : instantAnswer(content, new Date(), chatMode);
       if (instant) {
         // Explicitly labeled deterministic response: zero model download.
         replySource = 'instant';
@@ -322,6 +326,30 @@ export default function Home() {
               kind: citedWiki ? 'enciclopedia' : 'diretorio',
             })) } : chat));
         }
+        showReply();
+      } else if (chatMode === 'agent') {
+        if (!AGENT_PREVIEW || agentAdminKey.length < 32)
+          throw Error('O modo REZ Avançado exige a chave privada de administrador, que não será salva.');
+        setEngineStage('cloud');
+        const response = await fetch('/api/rez-agent', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-rez-admin-key': agentAdminKey },
+          cache: 'no-store', signal: controller.signal,
+          body: JSON.stringify({
+            mode: assistantMode,
+            messages: next.slice(-10).map(m => ({ role: m.role, content: m.content.slice(0, 2500) })),
+          }),
+        });
+        const payload: unknown = await response.json().catch(() => null);
+        if (!response.ok) {
+          const msg = payload && typeof payload === 'object' && 'error' in payload &&
+            typeof payload.error === 'string' ? payload.error : 'REZ Avançado indisponível.';
+          throw Error(msg);
+        }
+        if (!payload || typeof payload !== 'object' || !('text' in payload) ||
+          typeof payload.text !== 'string' || !payload.text.trim())
+          throw Error('O servidor avançado não gerou uma resposta válida.');
+        reply = payload.text;
         showReply();
       } else if (chatMode === 'cloud') {
         if (cloudConfigured !== true) {
@@ -453,12 +481,21 @@ export default function Home() {
                 onClick={() => { setChatMode('cloud'); setError(''); setProgress(null); setEngineStage(null); }}>
                 Cloudflare
               </button>
+              {AGENT_PREVIEW && <button type="button" disabled={busy || warmBusy} aria-pressed={chatMode === 'agent'}
+                className={chatMode === 'agent' ? 'selected' : ''}
+                onClick={() => { setChatMode('agent'); setError(''); setProgress(null); setEngineStage(null); }}>
+                REZ Avançado
+              </button>}
               <button type="button" disabled={busy || warmBusy} aria-pressed={chatMode === 'local'}
                 className={chatMode === 'local' ? 'selected' : ''}
                 onClick={() => { setChatMode('local'); setError(''); setProgress(null); setEngineStage(null); }}>
                 Local
               </button>
             </div>
+            {AGENT_PREVIEW && chatMode === 'agent' && <input type="password" autoComplete="off"
+              className="rezAgentAdminKey" aria-label="Chave privada de administrador REZ Avançado"
+              placeholder="Chave privada de administrador (não salva)"
+              value={agentAdminKey} onChange={e => setAgentAdminKey(e.target.value.slice(0, 256))} />}
             {chatMode === 'local' && <button className="permissionsToggle warmButton" type="button"
               onClick={() => warmBusy ? warmAbortRef.current?.abort() : void prepare()}
               disabled={busy || (modelReady && !warmBusy)}
@@ -499,6 +536,11 @@ export default function Home() {
                 Respostas de programação, estudos, cálculos simples e referências criadas pelo projeto.
                 Executado no servidor, sem chave de API e sem usar a GPU do seu PC.
                 É um sistema de regras e recuperação de informações, não um modelo generativo avançado.
+              </span>
+            : chatMode === 'agent'
+            ? <span><strong>REZ A.I · Agentes privados.</strong> Modo administrativo na nuvem,
+                com acesso restrito por chave. As perguntas são enviadas ao serviço externo
+                e ao provedor de modelo; documentos e comandos do seu PC não são enviados.
               </span>
             : chatMode === 'cloud'
             ? <span><strong>REZ A.I · Cérebro no servidor.</strong> A geração será feita pela Cloudflare, não pela CPU/GPU do seu PC. {cloudConfigured === true
