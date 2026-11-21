@@ -3,7 +3,7 @@
  * The wording reflects the user's currently selected Nuvem / Local mode.
  */
 export type InstantAnswer = { text: string; kind: 'instant' };
-export type ExecutionMode = 'cloud' | 'local';
+export type ExecutionMode = 'native' | 'cloud' | 'local';
 
 export function instantAnswer(
   text: string, now: Date = new Date(), mode: ExecutionMode = 'cloud',
@@ -12,9 +12,11 @@ export function instantAnswer(
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .replace(/[!?.,;:]+/g, ' ').replace(/\s+/g, ' ').trim();
   const reply = (answer: string): InstantAnswer => ({ text: answer, kind: 'instant' });
-  const engineDescription = mode === 'cloud'
-    ? 'Para perguntas mais completas, a REZ usa um modelo no servidor Cloudflare quando ele estiver conectado, sem baixar pesos no seu computador.'
-    : 'Para perguntas mais completas, a REZ usa um modelo aberto no seu dispositivo, após o download inicial dos pesos.';
+  const engineDescription = mode === 'native'
+    ? 'No modo Nativo, respondo usando o motor próprio de regras e referências da REZ, hospedado no site. Não sou um LLM de uso geral.'
+    : mode === 'cloud'
+      ? 'Para perguntas mais completas, a REZ usa um modelo no servidor Cloudflare quando ele estiver conectado, sem baixar pesos no seu computador.'
+      : 'Para perguntas mais completas, a REZ usa um modelo aberto no seu dispositivo, após o download inicial dos pesos.';
 
   if (/^(que horas sao|que horas e|qual e a hora|qual a hora|me diga as horas|horas|que hora e agora|que horas sao agora)$/.test(normalized)) {
     const clock = new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit' }).format(now);
