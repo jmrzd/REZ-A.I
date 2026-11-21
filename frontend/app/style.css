@@ -138,3 +138,40 @@
 .cloudDocsConsent input{accent-color:#a67bed;margin-top:3px}
 .cloudDocsConsent span{flex:1}
 @media(max-width:700px){.rezTaskMode{min-width:75px;max-width:94px;padding:7px 4px;font-size:11px}}
+
+
+/* REZ network knowledge: short licensed metadata, source links, and local catalog */
+.knowledgeNetworkButton{border-color:#665383!important}
+.networkPanel{flex-shrink:0;background:#120e1a;border-bottom:1px solid #392d49;padding:16px 22px;max-height:48dvh;overflow-y:auto;color:#dfd5ea;font-size:12px}
+.networkHeader{display:flex;justify-content:space-between;gap:12px}
+.networkHeader strong{display:flex;align-items:center;gap:7px;color:#e9d9fa;font-size:14px}
+.networkHeader p{margin:6px 0 12px;color:#a89ab8;font-size:12px;line-height:1.45}
+.networkHeader>button{background:transparent;color:#ac9abc;border:none;height:28px;cursor:pointer}
+.networkSearch{display:flex;gap:8px;margin-bottom:10px}
+.networkSearch input{flex:1;min-width:0;background:#21192c;border:1px solid #544264;border-radius:9px;padding:10px;color:#efe5f7;font:inherit}
+.networkSearch button,.networkImport button,.networkResultsHeading button{display:flex;align-items:center;justify-content:center;gap:6px;border:1px solid #70528c;background:#352448;color:#e8d3f9;padding:8px 12px;border-radius:9px;cursor:pointer;font-size:12px}
+.networkSearch button:disabled{opacity:.45;cursor:not-allowed}
+.networkConsent{display:flex;gap:9px;align-items:start;line-height:1.45;color:#c6b7d3;margin:8px 0 10px}
+.networkConsent input{accent-color:#a879eb;margin-top:3px}
+.networkImport{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:10px 0}
+.networkImport span{color:#b3a1c5;font-size:11px;margin-right:auto}
+.networkDisclaimer{font-size:10px;color:#9b8da9;line-height:1.55;margin:8px 0}
+.networkDisclaimer code{font-size:10px;overflow-wrap:anywhere}
+.networkError{background:#421d2e;color:#ffc4d4;padding:9px;border-radius:8px}
+.networkResults{background:#1b1525;border:1px solid #3b2d4b;padding:10px;border-radius:10px;margin:12px 0}
+.networkResultsHeading{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px}
+.networkResultsHeading strong{font-size:12px}
+.networkResult{display:flex;flex-direction:column;gap:4px;border-bottom:1px solid #372b45;padding:9px 0;color:#e9ddf5;text-decoration:none}
+.networkResultName{display:flex;align-items:center;gap:6px;font-weight:600}
+.networkResultMeta{font-size:11px;color:#b39bcf}
+.networkResultExcerpt{font-size:12px;color:#ad9ebc;line-height:1.45}
+.networkCatalog>strong{font-size:12px;color:#dfcdec}
+.networkLinks{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin:10px 0}
+.networkLinks a{display:flex;flex-direction:column;gap:4px;padding:9px;border-radius:8px;border:1px solid #382b45;color:#d8cbe8;background:#1e1728;text-decoration:none;min-width:0;overflow-wrap:anywhere}
+.networkLinks a:hover,.networkResult:hover{background:#31233f}
+.networkLinks small{color:#9d8aae;font-size:10px}
+.webCitations{display:flex;flex-direction:column;gap:7px;max-width:640px;margin:12px auto 18px;background:#1c1525;border:1px solid #463457;border-radius:10px;padding:12px;font-size:11px}
+.webCitations strong{color:#d9c5ee}
+.webCitations a{color:#c7aff2;text-decoration:underline;overflow-wrap:anywhere}
+@media(max-width:810px){.networkPanel{padding:12px;max-height:50dvh}.networkLinks{grid-template-columns:repeat(2,minmax(0,1fr))}.networkImport button{padding:7px}}
+@media(max-width:490px){.networkLinks{grid-template-columns:1fr}.networkSearch{flex-wrap:wrap}.networkSearch input{min-width:100%}.networkResultsHeading{flex-wrap:wrap}}
