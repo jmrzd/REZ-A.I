@@ -266,32 +266,40 @@ export default function Home() {
           throw Error('O cérebro em servidor ainda não foi conectado. É preciso publicar o Worker na Cloudflare e configurar a ligação segura à Vercel. Nenhum modelo será baixado automaticamente no seu PC.');
         }
         setEngineStage('cloud');
+        // Bundled reference metadata is safe to retrieve by default:
+        // it comes from REZ itself and does not contact third-party sites.
+        // This does NOT mean the model has read any linked pages.
         let publicEvidence = '';
-        if (searchWebForAnswers) {
-          setProgress({ text: 'Consultando referências públicas e a base de 440 fontes da REZ...' });
-          const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(5200)]);
-          const [research, directory] = await Promise.allSettled([
-            searchPublicKnowledge(content, signal),
-            getBundledCatalog(signal),
-          ]);
+        let directoryLeads: PublicHit[] = [];
+        try {
+          const directory = await getBundledCatalog(controller.signal);
+          const leads = rankCatalogSources(directory.sources, content, 3);
+          directoryLeads = leads.map(source => ({
+            title: source.nome, url: source.url, excerpt: 'Diretório: página não consultada',
+            provider: 'Diretório REZ' as const, kind: 'diretorio',
+          }));
+          publicEvidence = catalogueLeadsAsEvidence(leads);
+        } catch {
           if (controller.signal.aborted) throw new DOMException('Cancelado', 'AbortError');
-          const citations = research.status === 'fulfilled' ? research.value.results.slice(0, 5) : [];
-          const leads = directory.status === 'fulfilled'
-            ? rankCatalogSources(directory.value.sources, content, 3) : [];
-          // Directory links are NOT evidence that any article was read.
-          // Include only clearly-labeled leads so the model can suggest where to verify.
-          const leadsContext = catalogueLeadsAsEvidence(leads);
-          publicEvidence = [leadsContext, sourcesAsPromptContext(citations)]
-            .filter(Boolean).join('\n\n').slice(0, 1800);
-          const referenced: PublicHit[] = [
-            ...citations,
-            ...leads.map(source => ({
-              title: source.nome, url: source.url, excerpt: 'Diretório: página não consultada',
-              provider: 'Diretório REZ' as const, kind: 'diretorio',
-            })),
-          ];
+        }
+        // Network lookups still require explicit opt-in. They send the
+        // question to the Wikimedia and Crossref public research services.
+        let citations: PublicHit[] = [];
+        if (searchWebForAnswers) {
+          setProgress({ text: 'Buscando títulos e trechos em fontes públicas...' });
+          try {
+            const research = await searchPublicKnowledge(content,
+              AbortSignal.any([controller.signal, AbortSignal.timeout(5200)]));
+            citations = research.results.slice(0, 5);
+            publicEvidence = [publicEvidence, sourcesAsPromptContext(citations)]
+              .filter(Boolean).join('\n\n').slice(0, 1800);
+          } catch {
+            if (controller.signal.aborted) throw new DOMException('Cancelado', 'AbortError');
+          }
+        }
+        if (directoryLeads.length || citations.length) {
           setChats(previous => previous.map(chat => chat.id === id
-            ? { ...chat, webSources: referenced } : chat));
+            ? { ...chat, webSources: [...citations, ...directoryLeads] } : chat));
         }
         setProgress({ text: 'Gerando resposta no cérebro da REZ na nuvem...' });
         await generateHosted(next, sendDocsToCloud ? retrieval.context : '', controller.signal, text => {
