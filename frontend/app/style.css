@@ -104,3 +104,11 @@
  .headerControls select{max-width:165px;min-width:110px}
  .headerControls .permissionsToggle{padding:8px}
 }
+
+
+/* REZ unified auto mode, no confusing list of raw model names */
+.rezAutoLabel{border:1px solid #534068;border-radius:10px;padding:10px 12px;background:#241931;color:#ede0ff;display:flex;align-items:center;gap:7px;font-weight:600;font-size:12px;white-space:nowrap}
+.rezAutoLabel svg{color:#bd94f0}
+.rezAutoLabel>span{font-size:10px;color:#b4a1ce;font-weight:400}
+.quickReplyNote{font-size:10px;letter-spacing:.01em;color:#a594b6;padding-left:5px;margin-bottom:5px}
+@media(max-width:760px){.rezAutoLabel{padding:8px;font-size:11px}.rezAutoLabel>span{display:none}}
