@@ -175,3 +175,9 @@
 .webCitations a{color:#c7aff2;text-decoration:underline;overflow-wrap:anywhere}
 @media(max-width:810px){.networkPanel{padding:12px;max-height:50dvh}.networkLinks{grid-template-columns:repeat(2,minmax(0,1fr))}.networkImport button{padding:7px}}
 @media(max-width:490px){.networkLinks{grid-template-columns:1fr}.networkSearch{flex-wrap:wrap}.networkSearch input{min-width:100%}.networkResultsHeading{flex-wrap:wrap}}
+
+
+/* Explicit Worker health check; no paid AI call is made for readiness. */
+.cloudHealthButton{margin-left:10px;display:inline-flex;align-items:center;white-space:nowrap;padding:5px 9px;border:1px solid #6d5485;border-radius:8px;background:#281d35;color:#e6d7f4;font-size:11px;font-weight:600;cursor:pointer}
+.cloudHealthButton:disabled{opacity:.6;cursor:default}
+.cloudHealthButton:not(:disabled):hover{background:#3b2a52}
