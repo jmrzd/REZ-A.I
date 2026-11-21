@@ -1,3 +1,5 @@
+> **HISTÓRICO — esta integração com NVIDIA/Vercel AI Gateway foi descontinuada.** A versão ativa REZ Turbo v0.4 usa **GroqCloud Free + GPT-OSS 120B**, sem cartão. Consulte [REZ_GROQ_FREE.md](./REZ_GROQ_FREE.md) para o procedimento atual de instalação, segurança e limites.
+
 # REZ Turbo v0.3 — Chat sem baixar modelo no PC
 
 A REZ Turbo usa o modelo aberto **NVIDIA Nemotron 3.5 Lightning**, 30B parâmetros, executado em servidores da NVIDIA por meio do Vercel AI Gateway. **Não** é uma cópia ou engenharia reversa do ChatGPT; a REZ reproduz funcionalidades de chat com tecnologias disponíveis legalmente.
