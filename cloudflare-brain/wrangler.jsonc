@@ -1,0 +1,15 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "rez-ai-brain",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-11-18",
+  "ai": { "binding": "AI" },
+  "durable_objects": {
+    "bindings": [
+      { "name": "USAGE_GATE", "class_name": "UsageGate" }
+    ]
+  },
+  "migrations": [
+    { "tag": "v1-usage-gate", "new_sqlite_classes": ["UsageGate"] }
+  ]
+}
