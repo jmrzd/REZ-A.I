@@ -34,3 +34,150 @@
 .permissionsBackdrop .permissionRequest dl{overflow:auto;min-height:0;max-height:230px;padding-right:8px}
 .permissionsBackdrop .permissionActions{position:sticky;bottom:-18px;background:#14111d;padding:14px 0 2px;margin-top:auto;border-top:1px solid #453954;z-index:2}
 @media(max-width:700px){.permissionsBackdrop{padding:10px}.permissionsBackdrop .permissionsPanel{max-height:calc(100dvh - 20px)}.permissionsBackdrop .permissionsTop{top:-13px}.permissionsBackdrop .permissionActions{bottom:-13px}.permissionsBackdrop .permissionRequest dl{max-height:28dvh}}
+
+/* Fase 1: controles Kimi K3 e estados de streaming */
+.headerControls{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.headerControls select{max-width:210px}
+.stopButton{color:#f8d5d5!important;border-color:#8f4b58!important}
+.bubble{overflow-wrap:anywhere;white-space:pre-wrap}
+@media(max-width:680px){
+ .headerControls{gap:5px;max-width:65%;justify-content:flex-end}
+ .headerControls select{max-width:150px;font-size:11px}
+ .heading span{display:none}
+}
+
+
+/* REZ local inference: original dark/violet interface, no paid provider controls */
+.localBadge{display:inline-flex;align-items:center;gap:5px;border:1px solid #4f3c78;color:#d6bbff;background:#241a35;border-radius:20px;padding:7px 10px;font-size:11px;white-space:nowrap}
+.modelNotice{display:flex;align-items:center;gap:10px;padding:10px 24px;border-bottom:1px solid #241c32;color:#b7a8c8;background:#110e17;font-size:12px;line-height:1.5}
+.modelNotice strong{color:#e4d4f4}
+.modelNotice svg{flex-shrink:0;color:#aa8cff}
+.localProgress{display:flex;align-items:center;gap:10px;background:#1b1630;color:#dfd1f5;border:1px solid #4c3366;border-radius:12px;padding:11px 15px;font-size:12px;width:min(800px,calc(100% - 40px));margin:8px auto;flex-wrap:wrap}
+.localProgress svg{flex-shrink:0;color:#ac8bef}
+.localProgress progress{width:100%;height:7px;accent-color:#9e78e5}
+.messageContent{display:flex;flex-direction:column;align-items:flex-start;gap:5px;max-width:85%;min-width:0}
+.messageContent .bubble{max-width:100%}
+.message.user .messageContent{align-items:flex-end}
+.copyMessage{background:transparent;color:#9b91a9;border:0;font-size:11px;display:flex;align-items:center;gap:5px;padding:5px 7px}
+.copyMessage:hover{color:#d9c3ff}
+@media(max-width:900px){.localBadge{display:none}.headerControls select{max-width:200px}}
+@media(max-width:700px){.modelNotice{padding:8px 14px;font-size:11px}.messageContent{max-width:82%}.localProgress{width:calc(100% - 24px)}}
+
+
+/* GroqCloud free-tier setup banner */
+.groqSetup{border-bottom:1px solid #5a4169;background:#21172c;color:#e6d5f5}
+.groqSetup strong{color:#f4e7ff}
+.groqSetup a{color:#d6b4ff;text-decoration:underline;text-underline-offset:2px}
+.groqSetup code{background:#382449;color:#f0ddff;border-radius:4px;padding:1px 4px;white-space:nowrap}
+
+
+/* REZ Sovereign: client-side document memory, no API keys */
+.hiddenInput{display:none}
+.historyExport{font-size:11px;background:transparent;border:1px solid #393044;border-radius:8px;color:#bdaae3;padding:9px 11px;text-align:left;margin-top:4px}
+.historyExport:hover:not(:disabled){background:#281e3e}
+.historyExport:disabled{opacity:.35;cursor:not-allowed}
+.knowledgePanel{padding:15px 22px 14px;border-bottom:1px solid #352842;background:#130f1c;color:#ded7e8;max-height:35dvh;overflow:auto;flex-shrink:0}
+.knowledgeHeader{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.knowledgeHeader>div{flex:1;min-width:0}
+.knowledgeHeader strong{display:flex;align-items:center;gap:9px;font-size:13px;color:#eee3fb}
+.knowledgeHeader strong svg{color:#b195f5}
+.knowledgeHeader p{font-size:12px;line-height:1.5;color:#9f93af;margin:6px 0}
+.knowledgeAdd{display:flex;align-items:center;justify-content:center;gap:7px;white-space:nowrap;padding:8px 10px;font-size:11px;border:1px solid #624886;color:#eee3ff;border-radius:9px;background:#332448}
+.knowledgeAdd:hover{background:#45315e}
+.knowledgeClose{background:transparent;border:0;color:#aa93c8;padding:6px}
+.knowledgeMeta{font-size:11px;color:#9386a2;margin:6px 0 10px}
+.knowledgeFiles{display:flex;flex-wrap:wrap;gap:8px}
+.knowledgeFile{display:flex;align-items:center;gap:7px;border:1px solid #372b43;background:#1b1524;color:#ddd0eb;border-radius:8px;padding:7px 9px;font-size:11px;max-width:260px}
+.knowledgeFile>svg{flex-shrink:0;color:#b89bee}
+.knowledgeFile>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.knowledgeFile>button{background:transparent;border:0;color:#9184a2;display:flex;padding:2px}
+.knowledgeFile>button:hover{color:#f4a5be}
+.knowledgeEmpty{color:#9c8daf;font-size:12px}
+.knowledgeSources{text-align:center;font-size:11px;color:#9c88b4;margin:16px}
+@media(max-width:720px){
+ .knowledgePanel{padding:12px 14px;max-height:42dvh}
+ .knowledgeHeader{flex-wrap:wrap}
+ .knowledgeAdd{order:2}
+ .knowledgeClose{order:1}
+ .knowledgeHeader>div{width:100%;flex-basis:100%}
+ .headerControls{gap:6px}
+ .headerControls select{max-width:165px;min-width:110px}
+ .headerControls .permissionsToggle{padding:8px}
+}
+
+
+/* REZ unified auto mode, no confusing list of raw model names */
+.rezAutoLabel{border:1px solid #534068;border-radius:10px;padding:10px 12px;background:#241931;color:#ede0ff;display:flex;align-items:center;gap:7px;font-weight:600;font-size:12px;white-space:nowrap}
+.rezAutoLabel svg{color:#bd94f0}
+.rezAutoLabel>span{font-size:10px;color:#b4a1ce;font-weight:400}
+.quickReplyNote{font-size:10px;letter-spacing:.01em;color:#a594b6;padding-left:5px;margin-bottom:5px}
+@media(max-width:760px){.rezAutoLabel{padding:8px;font-size:11px}.rezAutoLabel>span{display:none}}
+
+
+/* Optional, explicit warm-up of the on-device AI */
+.warmButton{border-color:#665188!important;background:#281b3a!important;color:#e8d5ff!important;white-space:nowrap}
+.warmButton:not(:disabled):hover{background:#392652!important}
+.warmButton:disabled{opacity:.75;cursor:default}
+.warmButton svg{color:#bb94f8}
+@media(max-width:790px){.warmButton span{display:none}}
+
+
+/* REZ Cloud is a real hosted inference mode, never downloads weights locally. */
+.rezModeSwitch{display:flex;gap:3px;padding:3px;background:#16111e;border:1px solid #40314e;border-radius:12px;white-space:nowrap}
+.rezModeSwitch button{color:#998caa;border:0;background:transparent;border-radius:9px;padding:7px 10px;font-size:12px;font-weight:600}
+.rezModeSwitch button.selected{background:#563780;color:#f6eaff}
+.rezModeSwitch button:not(:disabled):hover{color:#f1ddff}
+.rezModeSwitch button:disabled{opacity:.4;cursor:not-allowed}
+@media(max-width:920px){.rezModeSwitch button{padding:6px 8px;font-size:11px}}
+@media(max-width:640px){.rezModeSwitch{gap:2px}.rezModeSwitch button{font-size:10px;padding:6px}.rezAutoLabel{display:none}}
+
+
+/* Cloud task selector and opt-in document context */
+.rezTaskMode{min-width:102px;max-width:124px;border:1px solid #55416c;border-radius:9px;background:#21172d;color:#e7d7fa;padding:8px;font-size:12px}
+.cloudDocsConsent{display:flex;align-items:flex-start;gap:10px;cursor:pointer;color:#d3c4e6;font-size:12px;line-height:1.5;margin:12px 0;border:1px solid #55436c;padding:11px;border-radius:9px;background:#22182c}
+.cloudDocsConsent input{accent-color:#a67bed;margin-top:3px}
+.cloudDocsConsent span{flex:1}
+@media(max-width:700px){.rezTaskMode{min-width:75px;max-width:94px;padding:7px 4px;font-size:11px}}
+
+
+/* REZ network knowledge: short licensed metadata, source links, and local catalog */
+.knowledgeNetworkButton{border-color:#665383!important}
+.networkPanel{flex-shrink:0;background:#120e1a;border-bottom:1px solid #392d49;padding:16px 22px;max-height:48dvh;overflow-y:auto;color:#dfd5ea;font-size:12px}
+.networkHeader{display:flex;justify-content:space-between;gap:12px}
+.networkHeader strong{display:flex;align-items:center;gap:7px;color:#e9d9fa;font-size:14px}
+.networkHeader p{margin:6px 0 12px;color:#a89ab8;font-size:12px;line-height:1.45}
+.networkHeader>button{background:transparent;color:#ac9abc;border:none;height:28px;cursor:pointer}
+.networkSearch{display:flex;gap:8px;margin-bottom:10px}
+.networkSearch input{flex:1;min-width:0;background:#21192c;border:1px solid #544264;border-radius:9px;padding:10px;color:#efe5f7;font:inherit}
+.networkSearch button,.networkImport button,.networkResultsHeading button{display:flex;align-items:center;justify-content:center;gap:6px;border:1px solid #70528c;background:#352448;color:#e8d3f9;padding:8px 12px;border-radius:9px;cursor:pointer;font-size:12px}
+.networkSearch button:disabled{opacity:.45;cursor:not-allowed}
+.networkConsent{display:flex;gap:9px;align-items:start;line-height:1.45;color:#c6b7d3;margin:8px 0 10px}
+.networkConsent input{accent-color:#a879eb;margin-top:3px}
+.networkImport{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:10px 0}
+.networkImport span{color:#b3a1c5;font-size:11px;margin-right:auto}
+.networkDisclaimer{font-size:10px;color:#9b8da9;line-height:1.55;margin:8px 0}
+.networkDisclaimer code{font-size:10px;overflow-wrap:anywhere}
+.networkError{background:#421d2e;color:#ffc4d4;padding:9px;border-radius:8px}
+.networkResults{background:#1b1525;border:1px solid #3b2d4b;padding:10px;border-radius:10px;margin:12px 0}
+.networkResultsHeading{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px}
+.networkResultsHeading strong{font-size:12px}
+.networkResult{display:flex;flex-direction:column;gap:4px;border-bottom:1px solid #372b45;padding:9px 0;color:#e9ddf5;text-decoration:none}
+.networkResultName{display:flex;align-items:center;gap:6px;font-weight:600}
+.networkResultMeta{font-size:11px;color:#b39bcf}
+.networkResultExcerpt{font-size:12px;color:#ad9ebc;line-height:1.45}
+.networkCatalog>strong{font-size:12px;color:#dfcdec}
+.networkLinks{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin:10px 0}
+.networkLinks a{display:flex;flex-direction:column;gap:4px;padding:9px;border-radius:8px;border:1px solid #382b45;color:#d8cbe8;background:#1e1728;text-decoration:none;min-width:0;overflow-wrap:anywhere}
+.networkLinks a:hover,.networkResult:hover{background:#31233f}
+.networkLinks small{color:#9d8aae;font-size:10px}
+.webCitations{display:flex;flex-direction:column;gap:7px;max-width:640px;margin:12px auto 18px;background:#1c1525;border:1px solid #463457;border-radius:10px;padding:12px;font-size:11px}
+.webCitations strong{color:#d9c5ee}
+.webCitations a{color:#c7aff2;text-decoration:underline;overflow-wrap:anywhere}
+@media(max-width:810px){.networkPanel{padding:12px;max-height:50dvh}.networkLinks{grid-template-columns:repeat(2,minmax(0,1fr))}.networkImport button{padding:7px}}
+@media(max-width:490px){.networkLinks{grid-template-columns:1fr}.networkSearch{flex-wrap:wrap}.networkSearch input{min-width:100%}.networkResultsHeading{flex-wrap:wrap}}
+
+
+/* Explicit Worker health check; no paid AI call is made for readiness. */
+.cloudHealthButton{margin-left:10px;display:inline-flex;align-items:center;white-space:nowrap;padding:5px 9px;border:1px solid #6d5485;border-radius:8px;background:#281d35;color:#e6d7f4;font-size:11px;font-weight:600;cursor:pointer}
+.cloudHealthButton:disabled{opacity:.6;cursor:default}
+.cloudHealthButton:not(:disabled):hover{background:#3b2a52}
