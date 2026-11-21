@@ -6,6 +6,7 @@
  * Keep Vercel Authentication active: the free hosting plan still has quotas.
  */
 import { nativeAnswer, type NativeMode, type NativeTurn } from '../../rez-native-core';
+import { researchOnWikipedia } from '../../rez-native-research';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -54,6 +55,7 @@ export async function POST(request: Request): Promise<Response> {
   const mode = input.mode ?? 'general';
   const messages = input.messages;
   const context = input.documentContext ?? '';
+  const researchEnabled = input.allowPublicResearch === true;
   if (!ALLOWED_MODES.includes(mode as NativeMode) ||
       !Array.isArray(messages) || messages.length < 1 || messages.length > 14 ||
       !messages.every(row =>
@@ -67,7 +69,21 @@ export async function POST(request: Request): Promise<Response> {
     return Response.json({ error: 'Mensagens ou modo inválidos.' }, { status: 400, headers: HEADERS });
   }
 
-  // No execution, network fetch, shell commands or model inference occur.
+  // Deterministic first-party answers remain immediate and need no remote call.
   const result = nativeAnswer(messages as NativeTurn[], mode as NativeMode, context);
+  if (result.method !== 'fallback' || !researchEnabled ||
+      mode === 'summary') return Response.json(result, { headers: HEADERS });
+
+  // Only with explicit opt-in does the current question go to Wikimedia.
+  // The remaining chat and private documents are NEVER forwarded upstream.
+  // The remote content is displayed as an attributed extract, not fed into a
+  // language model, executed as code, or promoted to privileged instructions.
+  try {
+    const question = (messages as NativeTurn[]).at(-1)!.content;
+    const researched = await researchOnWikipedia(question, request.signal);
+    if (researched) return Response.json(researched, { headers: HEADERS });
+  } catch {
+    // Wikimedia unavailable: return the honest built-in fallback.
+  }
   return Response.json(result, { headers: HEADERS });
 }
