@@ -9,7 +9,7 @@ import {
 import ToolApprovalDemo from './ToolApprovalDemo';
 import { generateLocal, prepareLocal, hasWebGPU, type ChatTurn, type Progress } from './local-ai';
 import { instantAnswer } from './instant-replies';
-import { generateHosted } from './cloud-ai';
+import { generateHosted, type AssistMode } from './cloud-ai';
 import {
   buildLocalContext, readDocuments, removeDocument, saveDocument,
   type LocalDocument, MAX_DOC_BYTES, MAX_DOCS,
@@ -45,6 +45,9 @@ export default function Home() {
   const [draft, setDraft] = useState('');
   const [hasGpu, setHasGpu] = useState<boolean | null>(null);
   const [chatMode, setChatMode] = useState<'cloud' | 'local'>('cloud');
+  const [assistantMode, setAssistantMode] = useState<AssistMode>('general');
+  // Explicit consent: do not send document excerpts to the Cloudflare model by default.
+  const [sendDocsToCloud, setSendDocsToCloud] = useState(false);
   const [cloudConfigured, setCloudConfigured] = useState<boolean | null>(null);
   const [documents, setDocuments] = useState<LocalDocument[]>([]);
   const [docsOpen, setDocsOpen] = useState(false);
@@ -216,11 +219,12 @@ export default function Home() {
     const controller = new AbortController();
     abortRef.current = controller;
     const retrieval = buildLocalContext(documents, content);
+    const sharedSources = chatMode === 'local' || sendDocsToCloud ? retrieval.sources : [];
 
     setActive(id);
     setChats(previous => previous.some(chat => chat.id === id)
-      ? previous.map(chat => chat.id === id ? { ...chat, messages: next, sources: retrieval.sources } : chat)
-      : [{ id, title: content.slice(0, 50), messages: next, sources: retrieval.sources }, ...previous]);
+      ? previous.map(chat => chat.id === id ? { ...chat, messages: next, sources: sharedSources } : chat)
+      : [{ id, title: content.slice(0, 50), messages: next, sources: sharedSources }, ...previous]);
     setDraft('');
     setBusy(true);
     setProgress({ text: chatMode === 'cloud'
@@ -247,7 +251,7 @@ export default function Home() {
     };
 
     try {
-      const instant = instantAnswer(content);
+      const instant = instantAnswer(content, new Date(), chatMode);
       if (instant) {
         // Explicitly labeled deterministic response: zero model download.
         replySource = 'instant';
@@ -258,10 +262,10 @@ export default function Home() {
           throw Error('O cérebro em servidor ainda não foi conectado. É preciso publicar o Worker na Cloudflare e configurar a ligação segura à Vercel. Nenhum modelo será baixado automaticamente no seu PC.');
         }
         setEngineStage('cloud');
-        await generateHosted(next, retrieval.context, controller.signal, text => {
+        await generateHosted(next, sendDocsToCloud ? retrieval.context : '', controller.signal, text => {
           reply += text;
           queueReply();
-        });
+        }, assistantMode);
         if (!reply.trim()) throw Error('A IA hospedada terminou sem produzir texto.');
       } else {
         await generateLocal({
@@ -360,6 +364,16 @@ export default function Home() {
               aria-expanded={showPermissions}>
               <ShieldCheck size={16} /> <span>Permissões</span>
             </button>
+            {chatMode === 'cloud' && (
+              <select className="rezTaskMode" aria-label="Modo da REZ" value={assistantMode}
+                disabled={busy || warmBusy}
+                onChange={e => setAssistantMode(e.target.value as AssistMode)}>
+                <option value="general">Conversa</option>
+                <option value="study">Estudos</option>
+                <option value="code">Código</option>
+                <option value="summary">Resumo</option>
+              </select>
+            )}
             <span className="rezAutoLabel"><BrainCircuit size={16} /> REZ A.I <span>{chatMode === 'cloud' ? 'Servidor' : 'Local'}</span></span>
           </div>
         </header>
@@ -393,6 +407,14 @@ export default function Home() {
                 onClick={() => setDocsOpen(false)}><ChevronDown size={18} /></button>
             </div>
             <p className="knowledgeMeta">{documents.length}/{MAX_DOCS} documentos · até {Math.round(MAX_DOC_BYTES / 1000)} KB cada · TXT, MD, CSV, JSON, JS, TS, PY, SQL</p>
+            {chatMode === 'cloud' && (
+              <label className="cloudDocsConsent">
+                <input type="checkbox" checked={sendDocsToCloud}
+                  onChange={e => setSendDocsToCloud(e.target.checked)} />
+                <span>Permitir enviar trechos relevantes dos meus documentos à Cloudflare para responder.
+                  Desativado por padrão; os arquivos completos continuam neste navegador.</span>
+              </label>
+            )}
             {documents.length ? (
               <div className="knowledgeFiles">
                 {documents.map(doc => (
@@ -404,7 +426,7 @@ export default function Home() {
                   </div>
                 ))}
               </div>
-            ) : <p className="knowledgeEmpty">Adicione documentos ou códigos para a REZ consultar sem enviar nada à nuvem.</p>}
+            ) : <p className="knowledgeEmpty">Adicione documentos. Trechos só serão enviados à nuvem se você autorizar.</p>}
           </section>
         )}
 
