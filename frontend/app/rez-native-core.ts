@@ -30,7 +30,7 @@ const STOP = new Set(['qual','quais','como','para','isso','essa','esse','quero',
 
 const normalize = (value: string): string => value.toLowerCase()
   .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-  .replace(/[^\p{L}\p{N}+\-*/(). ]/gu, ' ').replace(/\s+/g, ' ').trim();
+  .replace(/[^\p{L}\p{N}+\-*\/(). ]/gu, ' ').replace(/\s+/g, ' ').trim();
 
 function includesAny(text: string, pieces: string[]): boolean {
   return pieces.some(x => text.includes(x));
