@@ -33,7 +33,17 @@ const normalize = (value: string): string => value.toLowerCase()
   .replace(/[^\p{L}\p{N}+\-*\/(). ]/gu, ' ').replace(/\s+/g, ' ').trim();
 
 function includesAny(text: string, pieces: string[]): boolean {
-  return pieces.some(x => text.includes(x));
+  return pieces.some(raw => {
+    const term = raw.trim();
+    if (!term) return false;
+    // Very short labels such as "MER", "DER" or "SQL" must match a
+    // separate word, otherwise "aprender" would trigger a SQL reply.
+    if (term.length <= 3) {
+      const words = text.split(/[^a-z0-9]+/);
+      return words.includes(term);
+    }
+    return text.includes(term);
+  });
 }
 
 type Source = { nome: string; url: string; categoria: string };
@@ -160,7 +170,9 @@ export function nativeAnswer(history: NativeTurn[], mode: NativeMode = 'general'
   const calc = calculate(query);
   if (calc !== null) return answer(calc, 'matemática', query, 'calculation');
 
-  if (/^(oi|ola|opa|e ai|bom dia|boa tarde|boa noite)( |$)/.test(q))
+  // Only standalone greetings get greeting answers. Do NOT swallow a
+  // meaningful question that starts with "Oi, explique Python".
+  if (/^(oi|ola|opa|e ai|bom dia|boa tarde|boa noite)$/.test(q))
     return answer('Olá! Sou a REZ A.I, usando o REZ Native: um motor de respostas criado neste projeto, executado no servidor sem chave de API. ' +
       'Posso ajudar com programação, matemática básica e temas do meu catálogo. ' +
       'Para perguntas abertas fora da base, vou indicar minhas limitações.', 'ajuda', query);
