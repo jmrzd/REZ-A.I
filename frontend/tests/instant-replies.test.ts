@@ -45,3 +45,15 @@ test('generative engine provides automatic CPU recovery and no cloud access', ()
   assert.equal(engine.includes('api.moonshot.ai'), false);
   assert.equal(engine.includes('AI_GATEWAY_API_KEY'), false);
 });
+
+
+test('clock questions use device time instantly, without model inference', () => {
+  const fixed = new Date(2026, 10, 21, 14, 7, 0);
+  for (const question of ['que horas são', 'que horas são?', 'qual a hora?', 'que horas é', 'horas']) {
+    const result = instantAnswer(question, fixed);
+    assert.ok(result, question);
+    assert.equal(result.kind, 'instant');
+    assert.match(result.text, /14:07/);
+    assert.match(result.text, /dispositivo/);
+  }
+});
