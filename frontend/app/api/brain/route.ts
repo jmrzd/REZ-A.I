@@ -35,12 +35,33 @@ function fail(status: number, error: string): Response {
 }
 
 export async function GET(): Promise<Response> {
-  // A configured endpoint is not proof that the remote deployment is live.
-  return Response.json({
-    configured: !!config(),
-    provider: 'Cloudflare Workers AI',
-    engine: 'REZ Brain · GLM-4.7-Flash',
+  // Distinguish environment variables being set from an ACTUALLY reachable
+  // Worker with its required binding and quota gate configured.
+  // The health endpoint makes no model call and consumes no Neurons.
+  const settings = config();
+  if (!settings) return Response.json({
+    configured: false, online: false, status: 'not_configured',
+    provider: 'Cloudflare Workers AI', engine: 'REZ Brain · GLM-4.7-Flash',
   }, { headers: HEADERS });
+  try {
+    const url = settings.url.replace(/\/chat$/, '/health');
+    const response = await fetch(url, {
+      method: 'GET', cache: 'no-store', signal: AbortSignal.timeout(4000),
+    });
+    const payload: unknown = response.ok ? await response.json() : null;
+    const available = response.ok && payload && typeof payload === 'object' &&
+      'configured' in payload && payload.configured === true;
+    return Response.json({
+      configured: true, online: Boolean(available),
+      status: available ? 'reachable' : 'worker_unavailable',
+      provider: 'Cloudflare Workers AI', engine: 'REZ Brain · GLM-4.7-Flash',
+    }, { headers: HEADERS });
+  } catch {
+    return Response.json({
+      configured: true, online: false, status: 'worker_unavailable',
+      provider: 'Cloudflare Workers AI', engine: 'REZ Brain · GLM-4.7-Flash',
+    }, { headers: HEADERS });
+  }
 }
 
 export async function POST(request: Request): Promise<Response> {
