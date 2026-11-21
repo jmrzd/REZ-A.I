@@ -16,6 +16,7 @@ export default function Home() {
   const [ready, setReady] = useState(false);
   const [draft, setDraft] = useState('');
   const [modelId, setModelId] = useState('turbo');
+  const [turboConfigured, setTurboConfigured] = useState<boolean | null>(null);
   const [hasGpu, setHasGpu] = useState<boolean | null>(null);
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<Progress | null>(null);
@@ -43,6 +44,16 @@ export default function Home() {
     const gpu = hasWebGPU();
     setHasGpu(gpu);
     setReady(true);
+  }, []);
+  useEffect(() => {
+    // GET exposes only whether a server-side Groq key exists, never the key.
+    void fetch('/api/chat/turbo', { cache: 'no-store' })
+      .then(async res => {
+        if (!res.ok) return setTurboConfigured(false);
+        const status = await res.json() as { configured?: boolean };
+        setTurboConfigured(status.configured === true);
+      })
+      .catch(() => setTurboConfigured(null));
   }, []);
   useEffect(() => {
     if (!ready) return;
@@ -195,8 +206,8 @@ export default function Home() {
         </nav>
         <div className="sidefoot">
           <span className="statusDot" /> REZ A.I <span>• Open Source</span>
-          <p>Turbo: modelo hospedado com preço zero anunciado, sujeito a limites.</p>
-          <p>Histórico salvo no navegador; mensagens Turbo são enviadas à NVIDIA.</p>
+          <p>Turbo: GPT-OSS 120B no plano Groq Free. Sem cartão, com limites.</p>
+          <p>Histórico salvo no navegador; mensagens Turbo são enviadas à Groq.</p>
         </div>
       </aside>
       <section className="main">
@@ -212,7 +223,7 @@ export default function Home() {
             </button>
             <select aria-label="Modelo de IA" value={modelId} disabled={busy}
               onChange={e => { setModelId(e.target.value); setError(''); setProgress(null); }}>
-              <option value="turbo">REZ Turbo · Nemotron 30B (Nuvem)</option>
+              <option value="turbo">REZ Turbo · GPT-OSS 120B (Groq)</option>
               {LOCAL_MODELS.map(m => <option key={m.id} value={m.id}>{m.label}</option>)}
             </select>
           </div>
@@ -221,18 +232,24 @@ export default function Home() {
         <div className="modelNotice" role="status">
           {turbo ? <Zap size={16} /> : <Cpu size={16} />}
           {turbo
-            ? <span><strong>REZ Turbo · NVIDIA Nemotron 3.5 Lightning</strong> — modelo aberto de 30B executado na nuvem, sem baixar pesos ou exigir GPU. Oferta atualmente gratuita e sujeita a limites. Ao enviar, suas mensagens vão ao provedor NVIDIA, que pode retê-las para melhorias. Evite dados confidenciais.</span>
+            ? <span><strong>REZ Turbo · GPT-OSS 120B via GroqCloud</strong> — modelo aberto executado na nuvem, sem baixar pesos ou exigir GPU. Plano Free sem cartão, com limites diários e por minuto. Suas mensagens são transmitidas à Groq para gerar respostas. Evite enviar informações confidenciais.</span>
             : <span><strong>{selectedModel.label}</strong> · {selectedModel.memory}. {selectedModel.description}
               {hasGpu === false && selectedModel.engine === 'webgpu' && ' WebGPU indisponível: escolha o modelo CPU.'}
             </span>}
         </div>
+        {turbo && turboConfigured === false && (
+          <div className="modelNotice groqSetup" role="status">
+            <Zap size={16} />
+            <span><strong>Falta ativar a nuvem gratuita.</strong> Crie uma chave no <a href="https://console.groq.com/keys" target="_blank" rel="noopener noreferrer">GroqCloud (plano Free, sem cartão)</a> e cadastre-a como <code>GROQ_API_KEY</code> em <strong>Vercel → rez-ai → Settings → Environment Variables → Production</strong>. Depois faça Redeploy. Não coloque a chave no chat ou no GitHub.</span>
+          </div>
+        )}
         <div className="conversation">
           {messages.length === 0
             ? <div className="welcome">
               <div className="orb"><BrainCircuit size={36} /></div>
               <div className="eyebrow"><Sparkles size={13} /> {turbo ? "INTELIGÊNCIA RÁPIDA · SEM DOWNLOADS" : "INTELIGÊNCIA LIVRE · NO SEU DISPOSITIVO"}</div>
               <h1>O que vamos criar <em>hoje?</em></h1>
-              <p>{turbo ? "Converse com um modelo aberto de 30 bilhões de parâmetros na nuvem. Sem downloads pesados ou GPU no seu PC. O serviço é oferecido gratuitamente no momento, sujeito a limites." : "Converse com modelos abertos no seu dispositivo. Na primeira utilização, o navegador precisa baixar os pesos do modelo escolhido."}</p>
+              <p>{turbo ? "Converse com GPT-OSS 120B na GroqCloud, sem baixar pesos ou exigir uma GPU no seu PC. A ativação usa uma chave gratuita no servidor e o plano Free possui limites de uso." : "Converse com modelos abertos no seu dispositivo. Na primeira utilização, o navegador precisa baixar os pesos do modelo escolhido."}</p>
               <div className="chips">
                 <button onClick={() => setDraft('Me ajude a criar um projeto em Python')}>Criar com Python ↗</button>
                 <button onClick={() => setDraft('Explique como funciona uma inteligência artificial')}>Explorar IA ↗</button>
@@ -269,7 +286,7 @@ export default function Home() {
             ? <button className="stopButton" type="button" onClick={() => abortRef.current?.abort()} aria-label="Parar geração"><StopCircle size={20} /></button>
             : <button disabled={!draft.trim()} aria-label="Enviar mensagem"><Send size={19} /></button>}
         </form>
-        <footer>{turbo ? "Modelo hospedado pela NVIDIA via Vercel. A promoção gratuita pode mudar; não envie dados confidenciais." : "Pesos baixados de fontes abertas. Sem cobrança por token. Modelos pequenos podem cometer erros."}</footer>
+        <footer>{turbo ? "GPT-OSS 120B hospedado pela Groq. Plano Free sujeito a limites. Não envie dados confidenciais." : "Pesos baixados de fontes abertas. Sem cobrança por token. Modelos pequenos podem cometer erros."}</footer>
       </section>
     </main>
   );
