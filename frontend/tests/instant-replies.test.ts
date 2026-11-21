@@ -16,7 +16,7 @@ test('single-word Oi gets a meaningful immediate answer', () => {
 test('short courtesy and help use immediate offline rules', () => {
   assert.match(instantAnswer('Bom dia')?.text || '', /ajudar/);
   assert.match(instantAnswer('Obrigado')?.text || '', /Por nada/);
-  assert.match(instantAnswer('o que você faz?')?.text || '', /aplicativo de chat local/);
+  assert.match(instantAnswer('o que você faz?')?.text || '', /aplicativo de chat e consulta/);
   for (const prompt of ['COMO VC TA', 'como vc tá?', 'tudo bom', 'como você tá']) {
     assert.match(instantAnswer(prompt)?.text || '', /Estou disponível/, prompt);
   }
@@ -32,7 +32,7 @@ test('one REZ assistant displayed, no picker for external model brands', () => {
   const page = readFileSync(join(process.cwd(), 'app', 'page.tsx'), 'utf8');
   assert.equal(page.includes('<select aria-label="Modelo de IA local"'), false);
   assert.equal(page.includes('LOCAL_MODELS.map'), false);
-  assert.equal(page.includes("instantAnswer(content)"), true);
+  assert.equal(page.includes("instantAnswer(content, new Date(), chatMode)"), true);
   assert.match(page, /REZ A\.I <span>\{chatMode === 'cloud'/);
   assert.equal(existsSync(join(process.cwd(), 'app', 'api', 'chat', 'turbo', 'route.ts')), false);
 });
@@ -56,4 +56,13 @@ test('clock questions use device time instantly, without model inference', () =>
     assert.match(result.text, /14:07/);
     assert.match(result.text, /dispositivo/);
   }
+});
+
+
+test('quick replies reflect cloud vs local and name without loading weights', () => {
+  const cloud = instantAnswer('qual é seu nome?', new Date(), 'cloud');
+  const local = instantAnswer('qual é seu nome?', new Date(), 'local');
+  assert.match(cloud?.text || '', /servidor Cloudflare/);
+  assert.doesNotMatch(cloud?.text || '', /preciso carregar um modelo aberto no seu dispositivo/);
+  assert.match(local?.text || '', /no seu dispositivo/);
 });
