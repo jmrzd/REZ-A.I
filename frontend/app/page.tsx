@@ -51,6 +51,8 @@ export default function Home() {
   // Explicit consent: do not send document excerpts to the Cloudflare model by default.
   const [sendDocsToCloud, setSendDocsToCloud] = useState(false);
   const [cloudConfigured, setCloudConfigured] = useState<boolean | null>(null);
+  const [cloudOnline, setCloudOnline] = useState<boolean | null>(null);
+  const [checkingCloud, setCheckingCloud] = useState(false);
   const [documents, setDocuments] = useState<LocalDocument[]>([]);
   const [docsOpen, setDocsOpen] = useState(false);
   const [networkOpen, setNetworkOpen] = useState(false);
@@ -94,13 +96,25 @@ export default function Home() {
     setReady(true);
   }, []);
 
+  async function checkCloud() {
+    setCheckingCloud(true);
+    try {
+      const response = await fetch('/api/brain', {
+        cache: 'no-store', signal: AbortSignal.timeout(7000),
+      });
+      const health = await response.json() as { configured?: boolean; online?: boolean };
+      setCloudConfigured(response.ok && health.configured === true);
+      setCloudOnline(response.ok && health.online === true);
+    } catch {
+      setCloudConfigured(false);
+      setCloudOnline(false);
+    } finally {
+      setCheckingCloud(false);
+    }
+  }
+
   useEffect(() => {
-    void fetch('/api/brain', { cache: 'no-store' })
-      .then(async res => {
-        const data = await res.json() as { configured?: boolean };
-        setCloudConfigured(res.ok && data.configured === true);
-      })
-      .catch(() => setCloudConfigured(false));
+    void checkCloud();
   }, []);
 
   useEffect(() => {
@@ -265,6 +279,9 @@ export default function Home() {
         if (cloudConfigured !== true) {
           throw Error('O cérebro em servidor ainda não foi conectado. É preciso publicar o Worker na Cloudflare e configurar a ligação segura à Vercel. Nenhum modelo será baixado automaticamente no seu PC.');
         }
+        if (cloudOnline === false) {
+          throw Error('O Worker da Cloudflare está cadastrado, mas não responde à verificação de saúde. Confira a implantação e as vinculações de IA e limites antes de enviar mensagens.');
+        }
         setEngineStage('cloud');
         // Bundled reference metadata is safe to retrieve by default:
         // it comes from REZ itself and does not contact third-party sites.
@@ -426,10 +443,17 @@ export default function Home() {
           <Cpu size={16} />
           {chatMode === 'cloud'
             ? <span><strong>REZ A.I · Cérebro no servidor.</strong> A geração será feita pela Cloudflare, não pela CPU/GPU do seu PC. {cloudConfigured === true
-                ? 'Ligação configurada. Mensagens enviadas à nuvem; acesso sujeito à cota gratuita.'
+                ? (cloudOnline === true
+                    ? 'Worker acessível e vinculações detectadas. As mensagens serão processadas na nuvem, sujeitas à cota gratuita.'
+                    : 'O endereço do Worker está configurado, mas ele não está acessível ou não tem as vinculações necessárias.')
                 : cloudConfigured === false
                   ? 'O servidor Cloudflare ainda não foi conectado. A REZ não fará downloads locais automaticamente.'
-                  : 'Verificando conexão do servidor...'}</span>
+                  : 'Verificando conexão do servidor...'}
+                <button className="cloudHealthButton" type="button"
+                  disabled={checkingCloud || busy} onClick={() => void checkCloud()}>
+                  {checkingCloud ? 'Verificando...' : 'Testar conexão'}
+                </button>
+              </span>
             : <span><strong>REZ A.I · Modo local opcional.</strong> Aceleração pela GPU quando possível; CPU é mais lenta.
                 {engineStage === 'cpu' && ' Processamento atual: CPU.'}
                 {engineStage === 'gpu' && ' Processamento atual: WebGPU.'}
