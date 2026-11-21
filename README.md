@@ -1,3 +1,12 @@
+> **ATUALIZAÇÃO ATIVA — REZ LOCAL v0.2 (sem API paga):**
+> A versão web agora gera texto no próprio navegador com **WebLLM + Qwen2.5 (WebGPU)** ou **Transformers.js + SmolLM2 (CPU/WASM)**. Não usa Moonshot/Kimi, OpenAI nem créditos por token. A primeira mensagem exige baixar pesos públicos para o dispositivo. A API Python, se usada, é apenas para Ollama local.
+>
+> **Como abrir:** acesse o site hospedado da REZ A.I, selecione o modelo e converse — sem terminal. Consulte [instalação, limitações, modelos e licenças](docs/REZ_LOCAL_OPEN_SOURCE.md).
+>
+> O restante deste README contém o histórico do projeto e **pode descrever arquiteturas anteriores**. A documentação da versão ativa é o link acima.
+
+---
+
 <div align="center">
 
 # REZ A.I — Projeto de Inteligência Artificial Avançada 🤖
@@ -7,7 +16,7 @@
 **Uma plataforma de IA híbrida construída para aprender com a pesquisa de ponta e evoluir com evidências.**
 
 ![Status](https://img.shields.io/badge/status-MVP%20em%20desenvolvimento-8b5cf6?style=flat-square)
-![Version](https://img.shields.io/badge/version-0.1.0-27272a?style=flat-square)
+![Version](https://img.shields.io/badge/version-0.2.0%20local-27272a?style=flat-square)
 ![Web](https://img.shields.io/badge/interface-Full%20Black%20Premium-050507?style=flat-square)
 ![Python](https://img.shields.io/badge/backend-Python%20%2B%20FastAPI-3776AB?style=flat-square)
 ![Next.js](https://img.shields.io/badge/frontend-Next.js-111111?style=flat-square)
