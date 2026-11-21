@@ -1,68 +1,65 @@
-import { timingSafeEqual } from 'node:crypto';
-
+/**
+ * REZ Avançado · serverless engine on the existing Vercel site.
+ * Keeps the previous REZ Native/Cloudflare/local modes untouched.
+ * No additional server, paid model, plugin, token or install required.
+ *
+ * Keep Vercel Authentication enabled; this function consumes hosting quotas.
+ */
+import {runRezAgent, type AgentRequest} from '../../rez-serverless-agent';
+import type {NativeMode, NativeTurn} from '../../rez-native-core';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-const HEADERS = {'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'};
+const HEADERS = {'Cache-Control':'no-store', 'X-Content-Type-Options':'nosniff'};
+const MAX_BODY = 15000;
+const MODES: NativeMode[] = ['general','study','code','summary'];
+const fail = (code:number,error:string) => Response.json({error},{status:code,headers:HEADERS});
 
-function secretEquals(a: string | null, b: string): boolean {
- if(!a||a.length<32||a.length>256||b.length<32)return false;
- const x=Buffer.from(a), y=Buffer.from(b);
- return x.length===y.length&&timingSafeEqual(x,y);
+export async function GET():Promise<Response> {
+  return Response.json({
+    configured:true,
+    online:true,
+    engine:'REZ Avançado',
+    execution:'vercel-serverless',
+    generativeLLM:false,
+    externalAI:false,
+    requiresApiKey:false,
+    usesVisitorGPU:false,
+  },{headers:HEADERS});
 }
-function config():{url:string;shared:string;admin:string}|null {
- if(process.env.REZ_AGENT_ENABLED!=='true')return null;
- const origin=process.env.REZ_AGENT_URL,hostname=process.env.REZ_AGENT_ALLOWED_HOST;
- const shared=process.env.REZ_AGENT_SHARED_SECRET||'',admin=process.env.REZ_AGENT_ADMIN_KEY||'';
- if(!origin||!hostname||shared.length<32||admin.length<32||shared===admin)return null;
- try {
-  const url=new URL(origin);
-  if(url.protocol!=='https:'||url.hostname!==hostname||url.pathname!=='/'||
-     url.search||url.hash||url.username||url.password||(url.port&&url.port!=='443'))return null;
-  return {url:url.origin+'/internal/respond',shared,admin};
- }catch{return null}
-}
-function fail(status:number,error:string){return Response.json({error},{status,headers:HEADERS})}
-export async function GET(){
- return Response.json({configured:config()!==null,engine:'REZ Avançado'},{headers:HEADERS});
-}
+
 export async function POST(request:Request):Promise<Response> {
- const c=config();
- if(!c)return fail(503,'REZ Avançado não configurado.');
- const origin=request.headers.get('origin');
- if(request.headers.get('sec-fetch-site')==='cross-site' ||
-    (origin&&origin!==new URL(request.url).origin))return fail(403,'Origem inválida.');
- if(!secretEquals(request.headers.get('x-rez-admin-key'),c.admin))
-   return fail(403,'Chave de administrador inválida.');
- if(Number(request.headers.get('content-length')||0)>18000)return fail(413,'Mensagem grande demais.');
- let body:unknown;
- try{
-   const raw=await request.text();if(raw.length>18000)return fail(413,'Mensagem grande demais.');
-   body=JSON.parse(raw);
- }catch{return fail(400,'JSON inválido.')}
- if(!body||typeof body!=='object'||Array.isArray(body))return fail(400,'Formato inválido.');
- const mode=(body as {mode?:unknown}).mode;
- const messages=(body as {messages?:unknown}).messages;
- if(!['general','study','code','summary'].includes(String(mode))||
-    !Array.isArray(messages)||messages.length<1||messages.length>10||
-    !messages.every(m=>m&&typeof m==='object'&&!Array.isArray(m)&&
-      (m.role==='user'||m.role==='assistant')&&typeof m.content==='string'&&
-      m.content.trim()&&m.content.length<=2500)||messages.at(-1).role!=='user')
-   return fail(400,'Mensagens inválidas.');
- let remote:Response;
- try{
-  remote=await fetch(c.url,{
-   method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+c.shared},
-   body:JSON.stringify({mode,messages}),cache:'no-store',
-   signal:AbortSignal.any([request.signal,AbortSignal.timeout(95000)]),
-  });
- }catch{return fail(502,'O servidor da REZ não respondeu.')}
- if(!remote.ok)return fail(remote.status===429?429:503,
-  remote.status===429?'O servidor está ocupado.':'REZ Avançado temporariamente indisponível.');
- try{
-  const result:unknown=await remote.json();
-  if(!result||typeof result!=='object'||!('text'in result)||
-     typeof result.text!=='string'||!result.text.trim()||result.text.length>18000)
-    return fail(502,'Resposta inválida do servidor.');
-  return Response.json({text:result.text},{headers:HEADERS});
- }catch{return fail(502,'Resposta inválida do servidor.')}
+  const origin=request.headers.get('origin');
+  if(request.headers.get('sec-fetch-site')==='cross-site' ||
+    (origin && origin!==new URL(request.url).origin))
+    return fail(403,'Origem não autorizada.');
+  if(Number(request.headers.get('content-length')||'0')>MAX_BODY)
+    return fail(413,'Mensagem muito grande.');
+  let data:unknown;
+  try {
+    const raw=await request.text();
+    if(raw.length>MAX_BODY) return fail(413,'Mensagem muito grande.');
+    data=JSON.parse(raw);
+  } catch {return fail(400,'JSON inválido.');}
+  if(!data || typeof data!=='object' || Array.isArray(data))
+    return fail(400,'Formato inválido.');
+  const body=data as Record<string,unknown>;
+  const mode=body.mode??'general',messages=body.messages,context=body.documentContext??'';
+  if(!MODES.includes(mode as NativeMode) || !Array.isArray(messages) ||
+    messages.length<1 || messages.length>12 ||
+    !messages.every(row=>row && typeof row==='object' && !Array.isArray(row) &&
+      (row.role==='user'||row.role==='assistant') && typeof row.content==='string' &&
+      row.content.trim().length>0 && row.content.length<=2500) ||
+    messages.at(-1).role!=='user' || typeof context!=='string' || context.length>1800)
+    return fail(400,'Mensagens inválidas.');
+  try {
+    const result=await runRezAgent({
+      mode: mode as NativeMode,
+      messages: messages as NativeTurn[],
+      documentContext: context,
+      allowPublicResearch: body.allowPublicResearch===true,
+    } satisfies AgentRequest,request.signal);
+    return Response.json(result,{headers:HEADERS});
+  } catch {
+    return fail(503,'A REZ não concluiu a análise desta pergunta.');
+  }
 }

@@ -17,11 +17,10 @@ import {
   type LocalDocument, MAX_DOC_BYTES, MAX_DOCS,
 } from './knowledge';
 
-type RezMessage = ChatTurn & { source?: 'instant' | 'model' | 'native' };
+type RezMessage = ChatTurn & { source?: 'instant' | 'model' | 'native' | 'agent' };
 type Conversation = { id: string; title: string; messages: RezMessage[]; sources?: string[]; webSources?: PublicHit[] };
 
 const HISTORY_KEY = 'rez-ai-conversations-v1';
-const AGENT_PREVIEW = process.env.NEXT_PUBLIC_REZ_AGENT_PREVIEW === 'true';
 
 function friendlyError(error: unknown): string {
   // WebLLM sometimes rejects with a STRING rather than an Error object.
@@ -50,7 +49,6 @@ export default function Home() {
   // Native works on the Vercel server without a Cloudflare account or model API.
   const [chatMode, setChatMode] = useState<'native' | 'cloud' | 'local' | 'agent'>('native');
   const [assistantMode, setAssistantMode] = useState<AssistMode>('general');
-  const [agentAdminKey, setAgentAdminKey] = useState(''); // Memory-only; never store in chat/history.
   // Explicit consent: do not send document excerpts to the Cloudflare model by default.
   const [sendDocsToCloud, setSendDocsToCloud] = useState(false);
   const [cloudConfigured, setCloudConfigured] = useState<boolean | null>(null);
@@ -253,13 +251,13 @@ export default function Home() {
       : chatMode === 'cloud'
         ? 'Consultando o modelo hospedado na Cloudflare...'
         : chatMode === 'agent'
-          ? 'REZ Avançado: processando na nuvem privada...'
+          ? 'REZ Avançado: analisando no servidor da REZ...'
         : 'Preparando o modelo no seu dispositivo (primeiro download pode demorar)...' });
     setError('');
     setCopied(null);
 
     let reply = '';
-    let replySource: 'instant' | 'model' | 'native' = 'model';
+    let replySource: 'instant' | 'model' | 'native' | 'agent' = 'model';
     let flushTimer: ReturnType<typeof setTimeout> | null = null;
     const showReply = () => setChats(previous => previous.map(chat => chat.id === id
       ? { ...chat, messages: reply ? [...next, { role: 'assistant', content: reply, source: replySource }] : next }
@@ -328,16 +326,17 @@ export default function Home() {
         }
         showReply();
       } else if (chatMode === 'agent') {
-        if (!AGENT_PREVIEW || agentAdminKey.length < 32)
-          throw Error('O modo REZ Avançado exige a chave privada de administrador, que não será salva.');
+        // Runs on the existing Vercel service; no new plugin, key, model or daemon.
         setEngineStage('cloud');
         const response = await fetch('/api/rez-agent', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-rez-admin-key': agentAdminKey },
+          headers: { 'Content-Type': 'application/json' },
           cache: 'no-store', signal: controller.signal,
           body: JSON.stringify({
             mode: assistantMode,
             messages: next.slice(-10).map(m => ({ role: m.role, content: m.content.slice(0, 2500) })),
+            documentContext: sendDocsToCloud ? retrieval.context.slice(0, 1800) : '',
+            allowPublicResearch: searchWebForAnswers,
           }),
         });
         const payload: unknown = await response.json().catch(() => null);
@@ -350,6 +349,20 @@ export default function Home() {
           typeof payload.text !== 'string' || !payload.text.trim())
           throw Error('O servidor avançado não gerou uma resposta válida.');
         reply = payload.text;
+        replySource = 'agent';
+        if ('sources' in payload && Array.isArray(payload.sources)) {
+          const links = payload.sources.filter((r): r is {name:string;url:string} =>
+            r && typeof r.name === 'string' && typeof r.url === 'string' &&
+            r.url.startsWith('https://')).slice(0, 5);
+          const referenced = 'method' in payload && payload.method === 'reference';
+          setChats(previous => previous.map(chat => chat.id === id
+            ? { ...chat, webSources: links.map(r => ({
+                title: r.name, url: r.url,
+                excerpt: referenced ? 'Fonte pública consultada' : 'Diretório REZ · página não consultada',
+                provider: referenced ? 'Wikipédia' as const : 'Diretório REZ' as const,
+                kind: referenced ? 'enciclopedia' as const : 'diretorio' as const,
+            })) } : chat));
+        }
         showReply();
       } else if (chatMode === 'cloud') {
         if (cloudConfigured !== true) {
@@ -481,21 +494,17 @@ export default function Home() {
                 onClick={() => { setChatMode('cloud'); setError(''); setProgress(null); setEngineStage(null); }}>
                 Cloudflare
               </button>
-              {AGENT_PREVIEW && <button type="button" disabled={busy || warmBusy} aria-pressed={chatMode === 'agent'}
+              <button type="button" disabled={busy || warmBusy} aria-pressed={chatMode === 'agent'}
                 className={chatMode === 'agent' ? 'selected' : ''}
                 onClick={() => { setChatMode('agent'); setError(''); setProgress(null); setEngineStage(null); }}>
                 REZ Avançado
-              </button>}
+              </button>
               <button type="button" disabled={busy || warmBusy} aria-pressed={chatMode === 'local'}
                 className={chatMode === 'local' ? 'selected' : ''}
                 onClick={() => { setChatMode('local'); setError(''); setProgress(null); setEngineStage(null); }}>
                 Local
               </button>
             </div>
-            {AGENT_PREVIEW && chatMode === 'agent' && <input type="password" autoComplete="off"
-              className="rezAgentAdminKey" aria-label="Chave privada de administrador REZ Avançado"
-              placeholder="Chave privada de administrador (não salva)"
-              value={agentAdminKey} onChange={e => setAgentAdminKey(e.target.value.slice(0, 256))} />}
             {chatMode === 'local' && <button className="permissionsToggle warmButton" type="button"
               onClick={() => warmBusy ? warmAbortRef.current?.abort() : void prepare()}
               disabled={busy || (modelReady && !warmBusy)}
@@ -538,9 +547,9 @@ export default function Home() {
                 É um sistema de regras e recuperação de informações, não um modelo generativo avançado.
               </span>
             : chatMode === 'agent'
-            ? <span><strong>REZ A.I · Agentes privados.</strong> Modo administrativo na nuvem,
-                com acesso restrito por chave. As perguntas são enviadas ao serviço externo
-                e ao provedor de modelo; documentos e comandos do seu PC não são enviados.
+            ? <span><strong>REZ A.I · Cérebro avançado no servidor.</strong> Usa o motor de regras e conhecimento
+                hospedado na nossa Vercel, sem plugins, chaves de IA, downloads ou comandos no seu PC.
+                Responde aos assuntos cobertos e informa quando não sabe; não é um LLM generativo.
               </span>
             : chatMode === 'cloud'
             ? <span><strong>REZ A.I · Cérebro no servidor.</strong> A geração será feita pela Cloudflare, não pela CPU/GPU do seu PC. {cloudConfigured === true
@@ -620,7 +629,9 @@ export default function Home() {
               <h1>O que vamos criar <em>hoje?</em></h1>
               <p>{chatMode === 'cloud'
                 ? 'Nossa interface conectada a um modelo aberto em servidor. Sem downloads pesados no computador e sem depender da GPU local. O serviço precisa estar configurado e possui cota diária.'
-                : 'Modo alternativo no dispositivo: clique em Preparar IA para antecipar o carregamento. O primeiro download e a geração podem ser lentos.'}</p>
+                : chatMode === 'local'
+                  ? 'Modo no dispositivo: clique em Preparar IA para antecipar o carregamento. O primeiro download pode demorar.'
+                  : 'Nosso cérebro próprio funciona no servidor com regras, exemplos, memória de conversa e referências. O modo avançado organiza perguntas em etapas, sem modelo pago.'}</p>
               <div className="chips">
                 <button onClick={() => setDraft('Me ajude a criar um projeto em Python')}>Criar com Python ↗</button>
                 <button onClick={() => setDraft('Explique como modelos de linguagem funcionam')}>Aprender IA ↗</button>
@@ -638,6 +649,8 @@ export default function Home() {
                       <span className="quickReplyNote">Resposta rápida do aplicativo · sem geração por modelo</span>}
                     {message.role === 'assistant' && message.source === 'native' &&
                       <span className="quickReplyNote">REZ Native · motor próprio de regras e conhecimento · sem LLM externo</span>}
+                    {message.role === 'assistant' && message.source === 'agent' &&
+                      <span className="quickReplyNote">REZ Avançado · execução na Vercel · motor de regras e conhecimento, sem LLM externo</span>}
                     {message.role === 'assistant' && (
                       <button type="button" className="copyMessage"
                         onClick={() => void copyMessage(index, message.content)}

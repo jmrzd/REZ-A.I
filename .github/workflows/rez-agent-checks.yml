@@ -1,15 +1,15 @@
-name: REZ Advanced agent checks
+name: REZ serverless brain checks
 on:
   push:
     paths:
-      - 'rez-agent-cloud/**'
+      - 'frontend/app/rez-serverless-agent.ts'
       - 'frontend/app/api/rez-agent/**'
       - 'frontend/tests/rez-agent-route.test.ts'
       - 'frontend/app/page.tsx'
       - '.github/workflows/rez-agent-checks.yml'
   pull_request:
     paths:
-      - 'rez-agent-cloud/**'
+      - 'frontend/app/rez-serverless-agent.ts'
       - 'frontend/app/api/rez-agent/**'
       - 'frontend/tests/rez-agent-route.test.ts'
       - 'frontend/app/page.tsx'
@@ -17,31 +17,15 @@ on:
 permissions:
   contents: read
 jobs:
-  agent-guard:
+  serverless:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-      - name: Check runtime syntax
-        run: |
-          node --check rez-agent-cloud/server.mjs
-          node --check rez-agent-cloud/guard.mjs
-      - name: Verify request limits and authentication guards
-        run: node --test rez-agent-cloud/tests/*.test.mjs
-      - name: Build private agent container
-        run: docker build -t rez-ai-agent:test rez-agent-cloud
-  frontend:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '24'
-      - name: Install and test frontend
+      - name: Validate REZ Avançado without third-party runtime
         working-directory: frontend
         run: |
           npm install --no-audit --no-fund
-          npm test
-          npm run build
+          npx tsx --test tests/rez-agent-route.test.ts
