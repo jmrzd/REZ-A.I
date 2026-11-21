@@ -7,7 +7,7 @@ import {
   ShieldCheck, Files, Upload, FileText, HardDrive, ChevronDown,
 } from 'lucide-react';
 import ToolApprovalDemo from './ToolApprovalDemo';
-import { generateLocal, hasWebGPU, type ChatTurn, type Progress } from './local-ai';
+import { generateLocal, prepareLocal, hasWebGPU, type ChatTurn, type Progress } from './local-ai';
 import { instantAnswer } from './instant-replies';
 import {
   buildLocalContext, readDocuments, removeDocument, saveDocument,
@@ -48,11 +48,14 @@ export default function Home() {
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<Progress | null>(null);
   const [engineStage, setEngineStage] = useState<'gpu' | 'cpu' | null>(null);
+  const [warmBusy, setWarmBusy] = useState(false);
+  const [modelReady, setModelReady] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [showPermissions, setShowPermissions] = useState(false);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState<number | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const warmAbortRef = useRef<AbortController | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
 
@@ -168,10 +171,34 @@ export default function Home() {
     }
   }
 
+  async function prepare() {
+    if (busy || warmBusy || modelReady) return;
+    const controller = new AbortController();
+    warmAbortRef.current = controller;
+    setWarmBusy(true);
+    setError('');
+    setProgress({ text: 'Preparando modelo local com sua autorização. Pesos podem ser grandes na primeira vez...' });
+    try {
+      await prepareLocal(controller.signal, update => {
+        setProgress(update);
+        if (update.stage) setEngineStage(update.stage);
+      });
+      setModelReady(true);
+    } catch (error) {
+      setError(controller.signal.aborted
+        ? 'Preparação cancelada. Você pode tentar novamente quando quiser.'
+        : friendlyError(error));
+    } finally {
+      if (warmAbortRef.current === controller) warmAbortRef.current = null;
+      setWarmBusy(false);
+      setProgress(null);
+    }
+  }
+
   async function send(event: FormEvent) {
     event.preventDefault();
     const content = draft.trim();
-    if (!content || busy) return;
+    if (!content || busy || warmBusy) return;
     const id = active ?? crypto.randomUUID();
     const next: ChatTurn[] = [...messages, { role: 'user', content }];
     const controller = new AbortController();
@@ -227,6 +254,7 @@ export default function Home() {
         });
         if (!reply.trim())
           throw Error('Nenhum texto foi gerado. Confira RAM, GPU e o download dos pesos.');
+        setModelReady(true);
       }
     } catch (err) {
       setError(controller.signal.aborted ? 'Resposta interrompida.' : friendlyError(err));
@@ -281,6 +309,13 @@ export default function Home() {
           </div>
           <div className="headerControls">
             <span className="localBadge"><ShieldCheck size={13} /> 100% local</span>
+            <button className="permissionsToggle warmButton" type="button"
+              onClick={() => warmBusy ? warmAbortRef.current?.abort() : void prepare()}
+              disabled={busy || (modelReady && !warmBusy)}
+              title={warmBusy ? 'Cancelar a preparação' : modelReady ? 'Modelo pronto nesta aba' : 'Carregar o modelo antes de perguntar; opcional'}>
+              {modelReady ? <Check size={16} /> : <Download size={16} />}
+              <span>{warmBusy ? 'Cancelar preparo' : modelReady ? 'IA pronta' : 'Preparar IA'}</span>
+            </button>
             <button className="permissionsToggle" onClick={() => setDocsOpen(v => !v)}
               aria-expanded={docsOpen} type="button">
               <Files size={16} /> <span>Memória ({documents.length})</span>
@@ -298,6 +333,7 @@ export default function Home() {
           <span><strong>REZ A.I · Modo automático.</strong> Aceleração pela GPU quando possível; a CPU funciona sem GPU, mas é mais lenta.
             {engineStage === 'cpu' && ' Processamento atual: CPU. Para mais velocidade, habilite a aceleração gráfica/WebGPU no navegador.'}
             {engineStage === 'gpu' && ' Processamento atual: WebGPU.'}
+            {modelReady && ' Modelo já carregado nesta aba; próximas respostas pulam a inicialização.'}
             {hasGpu === false && engineStage === null && ' WebGPU não detectada; perguntas abertas podem ser lentas.'}
           </span>
         </div>
@@ -340,7 +376,7 @@ export default function Home() {
               <div className="orb"><BrainCircuit size={36} /></div>
               <div className="eyebrow"><Sparkles size={13} /> IA INDEPENDENTE · SEM CHAVES DE API</div>
               <h1>O que vamos criar <em>hoje?</em></h1>
-              <p>Uma única REZ A.I para conversar, aprender programação e consultar documentos locais. Saudações são instantâneas; perguntas abertas usam um modelo de IA no seu dispositivo e podem exigir download inicial.</p>
+              <p>Uma única REZ A.I para conversar, aprender programação e consultar documentos locais. Para evitar a espera na primeira pergunta longa, use Preparar IA antes. O primeiro download pode demorar, mas o modelo fica carregado nesta aba.</p>
               <div className="chips">
                 <button onClick={() => setDraft('Me ajude a criar um projeto em Python')}>Criar com Python ↗</button>
                 <button onClick={() => setDraft('Explique como modelos de linguagem funcionam')}>Aprender IA ↗</button>
@@ -384,8 +420,8 @@ export default function Home() {
         {error && <div className="error" role="alert">{error}</div>}
 
         <form onSubmit={send} className="composer">
-          <textarea aria-label="Sua mensagem" placeholder="Pergunte à REZ A.I independente..."
-            value={draft} onChange={e => setDraft(e.target.value)}
+          <textarea aria-label="Sua mensagem" placeholder={warmBusy ? 'Preparando IA. Você poderá perguntar quando terminar...' : 'Pergunte à REZ A.I independente...'}
+            value={draft} disabled={warmBusy} onChange={e => setDraft(e.target.value)}
             onKeyDown={e => {
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
@@ -397,9 +433,9 @@ export default function Home() {
             ? <button type="button" className="stopButton"
               onClick={() => abortRef.current?.abort()}
               aria-label="Parar geração"><StopCircle size={20} /></button>
-            : <button disabled={!draft.trim()} aria-label="Enviar mensagem"><Send size={19} /></button>}
+            : <button disabled={!draft.trim() || warmBusy} aria-label="Enviar mensagem"><Send size={19} /></button>}
         </form>
-        <footer>Sem chave/API de inferência. Respostas rápidas são pré-programadas; IA generativa exige pesos públicos, RAM/CPU/GPU e download inicial.</footer>
+        <footer>Sem API de inferência. Clique em Preparar IA para antecipar o carregamento; perguntas livres ainda dependem da CPU/GPU. Os pesos ficam sujeitos ao cache do navegador.</footer>
       </section>
     </main>
   );
