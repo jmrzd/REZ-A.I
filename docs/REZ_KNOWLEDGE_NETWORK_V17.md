@@ -1,11 +1,11 @@
-# REZ A.I v1.7 — Biblioteca de fontes e pesquisa na rede
+# REZ A.I v1.8 — Biblioteca de fontes, datasets e pesquisa na rede
 
 ## O que existe nesta versão
 
 A REZ tem um **painel Fontes** dentro da interface, separado da memória de documentos. O painel funciona sem que o Worker de IA da Cloudflare esteja ativo. Ele oferece:
 
-- Um catálogo inicial de mais de 70 portais educacionais, científicos, públicos e culturais.
-- **Importação de catálogos JSON** de até 2 MB. Use o arquivo `REZ-BASE-CONHECIMENTO-AMPLIADA.json` do pacote entregue na conversa para adicionar **440 links em 33 categorias** ao navegador. O catálogo importado é guardado em `localStorage`, não enviado ao backend nem sincronizado entre contas. A interface exibe quantidade e áreas.
+- Catálogo completo com **440 portais**, **33 categorias** e **23 links de feeds RSS** embutidos no site (sem coleta automática desses feeds).
+- **440 links incluídos por padrão**, carregados de `frontend/public/rez-knowledge-catalog.json`. Importação JSON continua opcional para adicionar ou substituir por um catálogo personalizado no `localStorage`.
 - Pesquisa pública via `/api/knowledge/search?q=...`. Essa rota chama somente **Wikipedia em português, Wikipedia em inglês e Crossref**, sem chave de API. Devolve títulos, pequenos trechos bibliográficos e links oficiais. Não baixa o texto inteiro das páginas.
 - Resultados clicáveis, indicação da origem, ano de publicação quando informado pelo Crossref e mensagem quando algum provedor falha.
 - Uma opção **desativada por padrão** para consultar fontes antes de cada resposta em modo Nuvem. Ao ativar, o termo pesquisado é enviado aos serviços Wikimedia e Crossref; os resultados são delimitados como fontes públicas não confiáveis antes de serem passados ao modelo remoto. Resultados aparecem também como links separados na conversa.
@@ -19,7 +19,7 @@ A versão de arquivo preparada para o usuário contém:
 - 360 perguntas de testes do ZIP original, **não são respostas nem fatos**.
 - README, CSV, JSON e os arquivos originais preservados.
 
-Importante: o catálogo completo de 440 URLs **não foi automaticamente copiado para o repositório**. Ele é fornecido como arquivo JSON importável na interface. O catálogo inicial integrado ao código cobre fontes de várias áreas. Os links não foram verificados individualmente ao vivo. Não afirmamos ter indexado toda a internet.
+Importante: o catálogo completo está agora nos arquivos do site e o JSON original foi adicionado em `knowledge/data/rez-knowledge-full.json`. As 360 perguntas não contêm respostas: foram preparadas com Hugging Face Datasets para testes e classificação experimental de assuntos, **não para fine-tuning do LLM**. Leia `docs/REZ_HF_DATASETS_TRAINING_V18.md`. Os links não foram verificados individualmente ao vivo. Não afirmamos ter indexado toda a internet.
 
 ## Escopo real de conhecimento
 
