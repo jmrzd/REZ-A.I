@@ -242,8 +242,8 @@ export default function Home() {
 
     setActive(id);
     setChats(previous => previous.some(chat => chat.id === id)
-      ? previous.map(chat => chat.id === id ? { ...chat, messages: next, sources: sharedSources } : chat)
-      : [{ id, title: content.slice(0, 50), messages: next, sources: sharedSources }, ...previous]);
+      ? previous.map(chat => chat.id === id ? { ...chat, messages: next, sources: sharedSources, webSources: [] } : chat)
+      : [{ id, title: content.slice(0, 50), messages: next, sources: sharedSources, webSources: [] }, ...previous]);
     setDraft('');
     setBusy(true);
     setProgress({ text: chatMode === 'native'
