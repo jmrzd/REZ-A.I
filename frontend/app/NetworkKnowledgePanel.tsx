@@ -3,8 +3,8 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { BookOpen, ExternalLink, Search, Upload, X, Trash2 } from 'lucide-react';
 import {
-  INITIAL_SOURCES, findSources, readImportedSources, saveImportedSources,
-  searchPublicKnowledge, type KnowledgeSource, type SearchResult,
+  INITIAL_SOURCES, findSources, getBundledCatalog, readImportedSources, saveImportedSources,
+  searchPublicKnowledge, type KnowledgeSource, type SearchResult, type FeedEntry,
 } from './knowledge-web';
 
 const STORAGE_KEY = 'rez-ai-network-sources-v1';
@@ -18,14 +18,27 @@ export default function NetworkKnowledgePanel({
   onSearchToggle: (enabled: boolean) => void;
 }) {
   const [catalog, setCatalog] = useState<KnowledgeSource[]>([]);
+  const [bundled, setBundled] = useState<KnowledgeSource[]>(INITIAL_SOURCES);
+  const [feeds, setFeeds] = useState<FeedEntry[]>([]);
+  const [catalogError, setCatalogError] = useState('');
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const fileRef = useRef<HTMLInputElement | null>(null);
-  useEffect(() => { setCatalog(readImportedSources()); }, []);
+  useEffect(() => {
+    const controller = new AbortController();
+    setCatalog(readImportedSources());
+    void getBundledCatalog(controller.signal)
+      .then(data => { setBundled(data.sources); setFeeds(data.feeds); })
+      .catch(() => {
+        if (!controller.signal.aborted)
+          setCatalogError('Não foi possível carregar as 440 fontes. Exibindo catálogo inicial.');
+      });
+    return () => controller.abort();
+  }, []);
 
-  const indexed = catalog.length ? catalog : INITIAL_SOURCES;
+  const indexed = catalog.length ? catalog : bundled;
   const matches = findSources(indexed, query, 40);
 
   async function liveSearch() {
@@ -85,20 +98,21 @@ export default function NetworkKnowledgePanel({
           pesquisar pode adicionar alguns segundos.</span>
       </label>
       <div className="networkImport">
-        <span><strong>{indexed.length} fontes</strong> · {new Set(indexed.map(s => s.categoria)).size} áreas · {catalog.length ? 'catálogo importado' : 'catálogo inicial'}</span>
+        <span><strong>{indexed.length} fontes</strong> · {new Set(indexed.map(s => s.categoria)).size} áreas · {feeds.length} feeds · {catalog.length ? 'catálogo personalizado' : 'base do projeto'}</span>
         <button type="button" onClick={() => fileRef.current?.click()}>
           <Upload size={14} /> Importar catálogo JSON
         </button>
         {catalog.length > 0 &&
           <button type="button" onClick={() => {
             localStorage.removeItem(STORAGE_KEY); setCatalog([]); setError('');
-          }} title="Excluir catálogo importado e voltar ao inicial">
+          }} title="Excluir catálogo importado e voltar à base incluída na REZ">
             <Trash2 size={14} /> Restaurar
           </button>}
         <input ref={fileRef} type="file" accept=".json,application/json" className="hiddenInput"
           aria-label="Importar arquivo JSON de fontes" onChange={e => void importCatalog(e)} />
       </div>
-      <p className="networkDisclaimer">Para importar as 440 fontes do pacote, extraia <code>REZ-BASE-CONHECIMENTO-AMPLIADA.json</code> do ZIP e selecione-o acima. Os links ficam neste navegador.</p>
+      <p className="networkDisclaimer">As 440 fontes e 23 feeds já estão incluídos na REZ; não é necessário importar arquivo. Você pode adicionar um catálogo personalizado acima.</p>
+      {catalogError && <p className="networkError">{catalogError}</p>}
       {error && <p className="networkError" role="alert">{error}</p>}
       {results && (
         <div className="networkResults">
@@ -130,7 +144,19 @@ export default function NetworkKnowledgePanel({
           {!matches.length && <p>Nenhuma fonte cadastrada com esse termo. Experimente a pesquisa online acima.</p>}
         </div>
       </div>
-      <p className="networkDisclaimer">Pesquisa sem chave de modelo, baseada em metadados e trechos. Confirme fatos nas páginas originais. O site principal precisa manter sua proteção de acesso.</p>
+      {feeds.length > 0 && (
+        <details className="networkCatalog networkFeedGroup">
+          <summary>Feeds de notícias cadastrados ({feeds.length})</summary>
+          <div className="networkLinks">
+            {feeds.map(feed =>
+              <a key={feed.feed} href={feed.feed} target="_blank" rel="noopener noreferrer">
+                <span>{feed.nome}</span>
+                <small>{feed.categoria.replaceAll('_',' ')} · Feed externo, não monitorado automaticamente</small>
+              </a>)}
+          </div>
+        </details>
+      )}
+      <p className="networkDisclaimer">Pesquisa sem chave de modelo, baseada em metadados e trechos. Fontes cadastradas não foram individualmente verificadas ao vivo. Confirme informações nas páginas originais.</p>
     </section>
   );
 }
