@@ -62,3 +62,10 @@
 .copyMessage:hover{color:#d9c3ff}
 @media(max-width:900px){.localBadge{display:none}.headerControls select{max-width:200px}}
 @media(max-width:700px){.modelNotice{padding:8px 14px;font-size:11px}.messageContent{max-width:82%}.localProgress{width:calc(100% - 24px)}}
+
+
+/* GroqCloud free-tier setup banner */
+.groqSetup{border-bottom:1px solid #5a4169;background:#21172c;color:#e6d5f5}
+.groqSetup strong{color:#f4e7ff}
+.groqSetup a{color:#d6b4ff;text-decoration:underline;text-underline-offset:2px}
+.groqSetup code{background:#382449;color:#f0ddff;border-radius:4px;padding:1px 4px;white-space:nowrap}
