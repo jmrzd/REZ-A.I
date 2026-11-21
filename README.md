@@ -1,3 +1,5 @@
+> **REZ A.I v1.2 — MELHORIAS DE DESEMPENHO E COERÊNCIA:** prioridade à GPU de alto desempenho, alternativa CPU Qwen2.5 0.5B quantizada em 4 bits, proteção contra repetições e renderização agrupada. Continua sem chave de API. **A CPU pode gerar mais devagar**, mesmo com respostas melhores. [Detalhes e limites](docs/REZ_SPEED_QUALITY_V12.md).
+
 > **REZ A.I v1.0 — INDEPENDENTE, 100% LOCAL, SEM CHAVE DE API:** esta é a versão ativa. WebLLM + Qwen2.5/SmolLM2 com GPU WebGPU em Web Worker, fallback CPU/WebAssembly com Transformers.js, memória de documentos no IndexedDB, busca local e exportação de histórico. **Não usa Moonshot, GroqCloud, Vercel AI Gateway ou qualquer endpoint de geração em nuvem.** O primeiro uso exige download dos pesos e execução com recursos do seu dispositivo. [Veja a arquitetura e os limites reais](docs/REZ_SOVEREIGN_V1.md).
 
 > Os textos abaixo sobre Groq/NVIDIA/Kimi são históricos e **não descrevem mais a versão ativa**.
