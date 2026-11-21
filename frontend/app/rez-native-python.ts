@@ -33,11 +33,14 @@ function quotedPayload(text: string): string | null {
 }
 
 function outputPayload(query: string): string | null {
-  const match = query.match(/\b(?:imprima|imprimir|imprime|printar|printe|print|exiba|exibir|mostre|mostrar|escreva|escrever|diga)\b([\s\S]*)$/i);
-  if (!match) return null;
-  const quoted = quotedPayload(match[1]);
+  // A request may contain two verbs: "escreva um código que imprima OI".
+  // The final output verb carries the actual printable payload.
+  const verbs = Array.from(query.matchAll(/\b(?:imprima|imprimir|imprime|printar|printe|print|exiba|exibir|mostre|mostrar|escreva|escrever|diga)\b/gi));
+  const verb = verbs.at(-1);
+  if (!verb || verb.index === undefined) return null;
+  let rest = query.slice(verb.index + verb[0].length).trim();
+  const quoted = quotedPayload(rest);
   if (quoted) return quoted;
-  let rest = match[1].trim();
   rest = rest.replace(/^(?:na|no)\s+(?:tela|terminal|console)\s*/i, '');
   rest = rest.replace(/^(?:a|o|as|os|um|uma)\s+(?:palavra|frase|mensagem|texto|string|numero|número)\s*/i, '');
   rest = rest.replace(/^(?:que\s+(?:diz|seja|contenha)|de|com|dizendo|escrito|igual\s+a)\s+/i, '');
