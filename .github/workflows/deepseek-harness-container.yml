@@ -1,0 +1,59 @@
+name: REZ - DeepSeek Harness remote container checks
+
+on:
+  push:
+    branches: ["feat/**"]
+    paths:
+      - "deploy/deepseek-harness/**"
+      - ".github/workflows/deepseek-harness-container.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "deploy/deepseek-harness/**"
+      - ".github/workflows/deepseek-harness-container.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-deployment:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: deploy/deepseek-harness
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify private and HTTPS overlays without secrets
+        shell: bash
+        run: |
+          set -eu
+          docker compose -f compose.yaml config --format json > /tmp/dsh-private.json
+          docker compose -f compose.yaml -f compose.private.yaml config --format json > /tmp/dsh-tunnel.json
+          DSH_DOMAIN=agent.example.invalid \
+          DSH_BASIC_AUTH_USER=testonly \
+          DSH_BASIC_AUTH_HASH=CI_ONLY_NOT_A_REAL_PASSWORD_HASH \
+            docker compose -f compose.yaml -f compose.public.yaml config --format json > /tmp/dsh-public.json
+          python3 - <<'PY'
+          import json
+          private=json.load(open("/tmp/dsh-private.json"))
+          tunnel=json.load(open("/tmp/dsh-tunnel.json"))
+          public=json.load(open("/tmp/dsh-public.json"))
+          assert private["services"]["harness"].get("ports", []) == [], "Base must expose no public port"
+          hp=tunnel["services"]["harness"].get("ports", [])
+          assert len(hp)==1 and hp[0]["host_ip"]=="127.0.0.1", "SSH mode must bind loopback only"
+          assert public["services"]["harness"].get("ports", []) == [], "Agent must never be exposed directly"
+          assert {int(p["published"]) for p in public["services"]["proxy"]["ports"]}=={80,443}
+          assert public["services"]["harness"]["security_opt"]==["no-new-privileges:true"]
+          print("Safe private, SSH-tunnel and protected reverse-proxy configuration validated")
+          PY
+
+      - name: Build pinned DeepSeek Harness image remotely (not on personal PC)
+        run: docker build --pull --tag rez-deepseek-harness-ci:preview .
+
+      - name: Verify installed upstream CLI without a model API key
+        run: |
+          docker run --rm --entrypoint dsh rez-deepseek-harness-ci:preview --version
+          docker run --rm --entrypoint dsh rez-deepseek-harness-ci:preview --help
