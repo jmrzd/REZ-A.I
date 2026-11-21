@@ -14,6 +14,7 @@
  * detail instead of a confusing list of externally branded assistants.
  */
 import type { WebWorkerMLCEngine } from '@mlc-ai/web-llm';
+import { hasRunawayRepetition } from './quality';
 
 export type ChatTurn = { role: 'user' | 'assistant'; content: string };
 export type Progress = { text: string; percent?: number; stage?: 'gpu' | 'cpu' };
@@ -35,14 +36,15 @@ type CpuReply = {
 
 const GPU_PRIMARY = 'Qwen2.5-0.5B-Instruct-q4f16_1-MLC';
 const GPU_COMPAT = 'SmolLM2-360M-Instruct-q4f32_1-MLC';
-const CPU_MODEL = 'onnx-community/SmolLM2-135M-Instruct-ONNX-GQA';
+const CPU_MODEL = 'onnx-community/Qwen2.5-0.5B-Instruct';
 
 const SYSTEM = [
-  'Você é a REZ A.I, assistente independente com modelos abertos rodando no navegador.',
-  'Responda em português brasileiro, de modo útil e direto.',
-  'Não finja ter acesso a internet, arquivos ou ferramentas não fornecidas.',
-  'Para programação, explique com exemplos corretos.',
-  'Se receber CONTEXTO DE DOCUMENTOS, use-o sem inventar fontes.',
+  'Você é a REZ A.I, assistente independente de IA local.',
+  'Responda em português do Brasil de forma natural, clara e objetiva.',
+  'Evite repetir frases, palavras e introduções desnecessárias.',
+  'Quando solicitado, ensine programação com exemplos concretos.',
+  'Não invente informações nem afirme ter pesquisado ou executado ferramentas.',
+  'Utilize apenas o contexto documental fornecido, quando existir.',
 ].join(' ');
 
 let gpuInstance: { id: string; worker: Worker; engine: WebWorkerMLCEngine } | null = null;
@@ -118,7 +120,9 @@ async function gpuChoice(): Promise<string | null> {
   if (!hasWebGPU()) return null;
   try {
     const gpu = navigator.gpu;
-    const adapter = await gpu.requestAdapter({ powerPreference: 'low-power' });
+    // Prefer the discrete/high-performance adapter; low-power integrated GPUs
+    // were making the site fall back to extremely slow CPU inference.
+    const adapter = await gpu.requestAdapter({ powerPreference: 'high-performance' });
     if (!adapter) return null;
     return adapter.features.has('shader-f16') ? GPU_PRIMARY : GPU_COMPAT;
   } catch {
@@ -166,7 +170,8 @@ async function runGPU(
     await guarded((async () => {
       const stream = await engine.chat.completions.create({
         messages: [{ role: 'system', content: system }, ...messages],
-        stream: true, temperature: 0.5, max_tokens: 360,
+        stream: true, temperature: 0.35, frequency_penalty: 0.35,
+        max_tokens: 240,
       });
       for await (const chunk of stream) {
         if (signal.aborted) throw abortException();
@@ -261,15 +266,24 @@ export async function generateLocal({
   const snippets = context.trim().slice(0, 2600);
   const system = snippets ? SYSTEM + '\n\nCONTEXTO DE DOCUMENTOS:\n' + snippets : SYSTEM;
   let received = false;
+  let assembled = '';
   const emit = (part: string) => {
-    if (part) { received = true; onDelta(part); }
+    if (!part) return;
+    received = true;
+    assembled += part;
+    onDelta(part);
+  };
+  const emitGpu = (part: string) => {
+    if (hasRunawayRepetition(assembled + part))
+      throw new Error('O modelo local começou a repetir palavras sem sentido. A resposta foi interrompida.');
+    emit(part);
   };
 
   const gpu = await gpuChoice();
   let gpuError = '';
   if (gpu) {
     try {
-      await runGPU(gpu, turns, system, signal, onProgress, emit);
+      await runGPU(gpu, turns, system, signal, onProgress, emitGpu);
       if (received) return;
       gpuError = 'O modelo gráfico encerrou sem produzir texto.';
     } catch (err) {
@@ -281,8 +295,8 @@ export async function generateLocal({
 
   onProgress({
     text: gpu
-      ? 'GPU indisponível para esta sessão. Tentando alternativa CPU local...'
-      : 'Sem WebGPU: iniciando alternativa CPU no navegador...',
+      ? 'GPU indisponível para esta sessão. Tentando Qwen local na CPU (pode ser lento)...'
+      : 'Sem WebGPU: carregando Qwen na CPU. Para maior velocidade, habilite aceleração gráfica no navegador.',
     stage: 'cpu',
   });
   try {
@@ -292,7 +306,7 @@ export async function generateLocal({
     if (signal.aborted || isAbort(err)) throw abortException();
     const detail = errorMessage(err);
     if (gpuError)
-      throw new Error('GPU indisponível (' + gpuError.slice(0, 140) + '). CPU: ' + detail.slice(0, 200));
+      throw new Error('Falha na GPU (' + gpuError.slice(0, 140) + '). Tentativa por CPU: ' + detail.slice(0, 200));
     throw new Error('Não foi possível iniciar a IA no dispositivo: ' + detail.slice(0, 240));
   }
 }
