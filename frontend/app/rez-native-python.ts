@@ -42,7 +42,7 @@ function outputPayload(query: string): string | null {
   rest = rest.replace(/^(?:a|o|as|os|um|uma)\s+(?:palavra|frase|mensagem|texto|string|numero|número)\s*/i, '');
   rest = rest.replace(/^(?:que\s+(?:diz|seja|contenha)|de|com|dizendo|escrito|igual\s+a)\s+/i, '');
   rest = rest.replace(/^(?:a|o)\s+seguinte\s*/i, '');
-  rest = rest.replace(/\s+(?:no\s+terminal|na\s+tela|no\s+console)\s*$/i, '');
+  rest = rest.replace(/\s+(?:no\s+terminal|na\s+tela|no\s+console|em\s+python|no\s+python)\s*\??$/i, '');
   rest = rest.replace(/\s*(?:\?|[.!])+\s*$/g, '').trim();
   if (!rest || rest.length > 120) return null;
   if (/^(?:um|uma|algo|qualquer|texto|mensagem|palavra|nome)$/i.test(rest)) return null;
