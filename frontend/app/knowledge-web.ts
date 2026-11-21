@@ -145,6 +145,36 @@ export function parseSourceCatalog(input: unknown): KnowledgeSource[] {
   return result;
 }
 
+/** The full curated catalog is bundled with the website.
+ * Users should not need to import the 440 links manually.
+ */
+export type FeedEntry = { categoria: string; nome: string; feed: string; idioma: string };
+
+export async function getBundledCatalog(signal?: AbortSignal): Promise<{
+  sources: KnowledgeSource[]; feeds: FeedEntry[];
+}> {
+  const response = await fetch('/rez-knowledge-catalog.json', {
+    cache: 'force-cache', signal,
+  });
+  if (!response.ok) throw new Error('Não foi possível carregar o catálogo incluído no site.');
+  const data: unknown = await response.json();
+  const sources = parseSourceCatalog(data);
+  const root = data && typeof data === 'object' ? data as Record<string, unknown> : {};
+  const rawFeeds = Array.isArray(root.feeds) ? root.feeds : [];
+  const feeds: FeedEntry[] = rawFeeds.slice(0, 100).flatMap(row => {
+    if (!row || typeof row !== 'object') return [];
+    const x = row as Record<string, unknown>;
+    if (typeof x.feed !== 'string' || !validPublicUrl(x.feed)) return [];
+    return [{
+      categoria: String(x.categoria || 'noticias').slice(0, 70),
+      nome: String(x.nome || new URL(x.feed).hostname).slice(0, 120),
+      feed: x.feed.slice(0, 1000),
+      idioma: String(x.idioma || 'mul').slice(0, 8),
+    }];
+  });
+  return { sources, feeds };
+}
+
 export function readImportedSources(): KnowledgeSource[] {
   if (typeof window === 'undefined') return [];
   try {
