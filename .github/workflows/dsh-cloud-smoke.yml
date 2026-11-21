@@ -1,0 +1,26 @@
+name: REZ DSH cloud launcher
+on:
+  push:
+    paths:
+      - 'harness-cloud/**'
+      - '.github/workflows/dsh-cloud-smoke.yml'
+  pull_request:
+    paths:
+      - 'harness-cloud/**'
+      - '.github/workflows/dsh-cloud-smoke.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  shell-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Check POSIX shell scripts
+        run: |
+          sh -n harness-cloud/start.sh
+          sh -n harness-cloud/tests/test-start.sh
+      - name: Test host, port and CLI flags
+        run: sh harness-cloud/tests/test-start.sh
