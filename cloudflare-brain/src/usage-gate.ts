@@ -14,10 +14,11 @@ const VISITOR_DAILY = 12;
 const VISITOR_PER_MINUTE = 3;
 
 export class UsageGate extends DurableObject<BrainEnv> {
+  private lastPruneDay = '';
   constructor(ctx: DurableObjectState, env: BrainEnv) {
     super(ctx, env);
     this.ctx.storage.sql.exec(
-      'CREATE TABLE IF NOT EXISTS counts (key TEXT PRIMARY KEY, hits INTEGER NOT NULL)'
+      'CREATE TABLE IF NOT EXISTS counts (key TEXT PRIMARY KEY, hits INTEGER NOT NULL, updated_ms INTEGER NOT NULL)'
     );
   }
 
@@ -42,15 +43,15 @@ export class UsageGate extends DurableObject<BrainEnv> {
       }
       for (const item of counters) {
         this.ctx.storage.sql.exec(
-          'INSERT INTO counts (key, hits) VALUES (?1, 1) ON CONFLICT(key) DO UPDATE SET hits = hits + 1',
-          item.key,
+          'INSERT INTO counts (key, hits, updated_ms) VALUES (?1, 1, ?2) ON CONFLICT(key) DO UPDATE SET hits = hits + 1, updated_ms = excluded.updated_ms',
+          item.key, now.getTime(),
         );
       }
-      // Reduce persistent rows without changing today's or this minute's usage.
-      // Roughly once per minute; deleting an older bucket is harmless.
-      if (Math.random() < 0.015) {
-        const older = new Date(now.getTime() - 2 * 86400000).toISOString().slice(0, 10);
-        this.ctx.storage.sql.exec('DELETE FROM counts WHERE key LIKE ?1', 'day:%:' + older + '%');
+      // One cleanup per UTC day per active instance; expired minute/day rows
+      // are discarded without touching counters used for current limits.
+      if (this.lastPruneDay !== day) {
+        this.ctx.storage.sql.exec('DELETE FROM counts WHERE updated_ms < ?1', now.getTime() - 2 * 86400000);
+        this.lastPruneDay = day;
       }
       return { allowed: true };
     });
