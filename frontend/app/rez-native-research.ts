@@ -15,7 +15,7 @@ const MAX_QUERY = 120;
 export function extractTopic(question: string): string {
   let topic = question.trim().replace(/\s+/g, ' ').slice(0, MAX_QUERY);
   topic = topic.replace(/^(?:oi[,!.\s]+)?(?:por favor[,.\s]+)?/i, '');
-  topic = topic.replace(/^(?:você pode |vc pode |pode )?(?:me )?(?:dizer|explicar|falar|contar|ensinar)\s+(?:sobre\s+)?/i, '');
+  topic = topic.replace(/^(?:você pode |vc pode |pode )?(?:me )?(?:dizer|explicar|explique|falar|contar|ensinar)\s+(?:sobre\s+)?/i, '');
   topic = topic.replace(/^(?:o que (?:é|e|foi|significa)|quem (?:é|e|foi)|quando (?:foi|aconteceu)|como (?:funciona|surgiu)|qual (?:é|e|foi))\s+/i, '');
   topic = topic.replace(/^sobre\s+/i, '').replace(/[?!.,;:\s]+$/g, '');
   return topic.slice(0, MAX_QUERY);
