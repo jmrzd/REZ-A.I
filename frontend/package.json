@@ -1,6 +1,6 @@
 {
   "name": "rez-ai-web",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -13,7 +13,8 @@
     "react-dom": "^19.0.0",
     "lucide-react": "^0.468.0",
     "@mlc-ai/web-llm": "0.2.89",
-    "@huggingface/transformers": "4.3.2"
+    "@huggingface/transformers": "4.3.2",
+    "@vercel/oidc": "^4.0.9"
   },
   "devDependencies": {
     "typescript": "^5.0.0",
