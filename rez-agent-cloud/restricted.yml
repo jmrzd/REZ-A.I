@@ -1,0 +1,44 @@
+# REZ Agent (private text-only mode). Source: DeepSeek Harness 0.2.2-rc.5 (MIT).
+- id: system-prompt
+  config:
+    personaPrefix: >-
+      Você é a Rez A.I. Responda em português claro. Este chat não dispõe
+      de ferramentas de execução, arquivos ou navegação. Não invente ações.
+- id: tool-bash
+  disabled: true
+- id: tool-pwsh
+  disabled: true
+- id: tool-jobs
+  disabled: true
+- id: tool-fs
+  disabled: true
+- id: tool-fs-search
+  disabled: true
+- id: tool-skill
+  disabled: true
+- id: tool-agent-team
+  disabled: true
+- id: tool-subagent-control
+  disabled: true
+- id: tool-subagent
+  disabled: true
+- id: tool-subagent-fork
+  disabled: true
+- id: tool-workflow
+  disabled: true
+- id: tool-web
+  disabled: true
+- id: tool-plugin-manager
+  disabled: true
+- id: tool-goal
+  disabled: true
+- id: tool-todo
+  disabled: true
+- id: tool-office
+  disabled: true
+- id: tool-schedule
+  disabled: true
+- id: tool-ask-user
+  disabled: true
+- id: present
+  disabled: true
