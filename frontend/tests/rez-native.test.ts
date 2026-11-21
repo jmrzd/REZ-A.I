@@ -124,7 +124,7 @@ test('native endpoint rejects invalid roles, oversized input and cross-site call
 test('native mode is default and never silently loads local models', () => {
   const page = readFileSync(join(process.cwd(), 'app', 'page.tsx'), 'utf8');
   const route = readFileSync(join(process.cwd(), 'app', 'api', 'rez-native', 'route.ts'), 'utf8');
-  assert.match(page, /useState<'native' \| 'cloud' \| 'local'>\('native'\)/);
+  assert.match(page, /useState<'native' \| 'cloud' \| 'local'(?: \| 'agent')?>\('native'\)/);
   assert.match(page, /fetch\('\/api\/rez-native'/);
   assert.match(page, /replySource = 'native'/);
   assert.match(page, /sem chave de API/);
