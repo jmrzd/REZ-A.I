@@ -172,7 +172,7 @@ export function nativeAnswer(history: NativeTurn[], mode: NativeMode = 'general'
   // "Me manda um código em Python que imprima OI" should always yield
   // print("OI"), not a link-directory fallback.
   const snippet = pythonSnippet(query);
-  if (snippet) return answer(explainPythonSnippet(snippet), 'python', query);
+  if (snippet) return { ...answer(explainPythonSnippet(snippet), 'python', query), sources: [] };
 
   const calc = calculate(query);
   if (calc !== null) return answer(calc, 'matemática', query, 'calculation');
